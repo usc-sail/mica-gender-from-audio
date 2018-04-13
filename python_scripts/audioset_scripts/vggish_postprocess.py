@@ -16,7 +16,7 @@
 """Post-process embeddings from VGGish."""
 
 import numpy as np
-
+np.warnings.filterwarnings('ignore')
 import vggish_params
 
 

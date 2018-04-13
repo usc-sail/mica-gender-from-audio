@@ -76,7 +76,7 @@ else
     expt_dir=gender_out_dir
 fi
 
-printf "nj=$nj\nexpt_dir=$expt_dir\nmovie_list=$movie_list\n"
+#printf "nj=$nj\nexpt_dir=$expt_dir\nmovie_list=$movie_list\n"
 
 proj_dir=$PWD
 cmd="run.pl"
@@ -88,7 +88,6 @@ lists_dir=$feats_dir/scp_lists
 py_scripts_dir=$proj_dir/python_scripts
 vad_model=$PWD/models/vad.h5
 gender_model=$PWD/models/gender.h5
-frame_len=0.01
 mkdir -p $wav_dir $full_wav_dir $feats_dir/log $lists_dir $expt_dir/VAD/timestamps $expt_dir/VAD/posteriors $expt_dir/GENDER/timestamps $expt_dir/GENDER/posteriors
 
 ### Create .wav files given movie_files
@@ -106,8 +105,8 @@ movie_count=1
 for movie_path in `cat $movie_list`
 do
     movieName=`basename $movie_path | awk -F '.' '{print $1}'`
-    cat $feats_dir/spliced_feats.scp | grep "${movieName}_seg" > $lists_dir/${movieName}_feats.scp
-    python $py_scripts_dir/generate_vad_labels.py $frame_len $expt_dir $lists_dir/${movieName}_feats.scp $vad_model &
+    cat $feats_dir/spliced_feats.scp | grep -- "${movieName}_seg" > $lists_dir/${movieName}_feats.scp
+    python $py_scripts_dir/generate_vad_labels.py $expt_dir $lists_dir/${movieName}_feats.scp $vad_model &
     if [ $(($movie_count % $nj)) -eq 0 ];then
         wait
     fi
@@ -118,9 +117,9 @@ wait
 ### Create VGGish embeddings
 echo " >>>> CREATING VGGISH EMBEDDINGS <<<< "
 ## Download vggish_model.ckpt file if not exists in python_scripts/audioset_scripts/ directory
-if ! [ -f $py_scripts_dir/audioset_scripts/vggish_model.ckpt ]; then
-    wget --load-cookies /tmp/cookies.txt "https://drive.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://drive.google.com/uc?export=download&id=1c-wi6F_Fv0Z0TmJBpSrlTT0iCDmKF_NJ' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=1c-wi6F_Fv0Z0TmJBpSrlTT0iCDmKF_NJ" -O $py_scripts_dir/audioset_scripts/vggish_model.ckpt && rm -rf /tmp/cookies.txt
-fi
+#if ! [ -f $py_scripts_dir/audioset_scripts/vggish_model.ckpt ]; then
+#    wget --load-cookies /tmp/cookies.txt "https://drive.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://drive.google.com/uc?export=download&id=1c-wi6F_Fv0Z0TmJBpSrlTT0iCDmKF_NJ' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=1c-wi6F_Fv0Z0TmJBpSrlTT0iCDmKF_NJ" -O $py_scripts_dir/audioset_scripts/vggish_model.ckpt && rm -rf /tmp/cookies.txt
+#fi
 
 ls $full_wav_dir/*.wav  > $expt_dir/wav.list
 movie_count=1
@@ -136,7 +135,7 @@ wait
 
 ### Make gender predictions
 echo " >>>> PREDICTING GENDER SEGMENTS <<<< "
-python $py_scripts_dir/predict_gender_median.py $frame_len $expt_dir $feats_dir/vggish $gender_model
+python $py_scripts_dir/predict_gender_median.py $expt_dir $gender_model
 
 ## Delete feature files and/or wav files unless otherwise specified
 if [[ "$feats_flag" == "n" ]]; then

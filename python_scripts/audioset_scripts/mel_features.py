@@ -16,7 +16,7 @@
 """Defines routines to compute mel spectrogram features from audio waveform."""
 
 import numpy as np
-
+np.warnings.filterwarnings('ignore')
 
 def frame(data, window_length, hop_length):
   """Convert array into a sequence of successive possibly overlapping frames.

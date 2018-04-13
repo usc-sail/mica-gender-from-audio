@@ -1,16 +1,22 @@
 import numpy as np
-import os
-import sys
+np.warnings.filterwarnings('ignore')
+import os, sys
 from scipy import signal as sig
 os.environ["CUDA_VISIBLE_DEVICES"]=""
+os.environ['TF_CPP_MIN_LOG_LEVEL']='3'
+stderr = sys.stderr
+sys.stderr = open(os.devnull, 'w')
+import keras
+sys.stderr = stderr
 import tensorflow as tf
 from keras.models import load_model
 import keras.backend as K
 config=tf.ConfigProto(intra_op_parallelism_threads=16, inter_op_parallelism_threads=16)
+import warnings
+warnings.filterwarnings("ignore")
 #from train_gender import FullyConnected
 #config = tf.ConfigProto()
 #config.gpu_options.per_process_gpu_memory_fraction = 0.2
-
 
 def generate_single_example(example):
     context_features = {'movie_id': tf.FixedLenFeature([], tf.string)}
@@ -29,17 +35,17 @@ def generate_single_example(example):
 
 
 def main():
-    frame_len = float(sys.argv[1])
-    expt_dir = sys.argv[2]
+    expt_dir = sys.argv[1]
     vad_ts_dir = expt_dir + '/VAD/timestamps/'
     write_post = expt_dir + '/GENDER/posteriors/'
-    write_ts = expt_dir + '/GENDER/timestamps_median/'
-    feats_path = sys.argv[3] + '/'
-
+    write_ts = expt_dir + '/GENDER/timestamps/'
+    feats_path = expt_dir + '/features/vggish/'
+    
     if not os.path.exists(write_post):
         os.makedirs(write_post)
     if not os.path.exists(write_ts):
         os.makedirs(write_ts)
+
     tfr_file = os.listdir(feats_path)
     tfr_paths = [feats_path + x for x in tfr_file]
     reader = tf.TFRecordReader()
@@ -51,7 +57,7 @@ def main():
         sess.run(tf.local_variables_initializer())
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(coord=coord)
-        model = load_model(sys.argv[4])
+        model = load_model(sys.argv[2])
 
         used = []
 
@@ -68,12 +74,12 @@ def main():
                 fts = open(write_ts + movie + '.ts','w')
                 vad_data = [x.rstrip().split() for x in open(vad_ts_dir + movie + '.ts', 'r').readlines()]
                 vad_times = [[float(x[0]), float(x[1])] for x in vad_data]
-    #            gender_labels = sig.medfilt(np.round(pred), 3)
+                gender_labels = sig.medfilt(np.round(pred), 3)
                 gender_labels = np.round([np.repeat(x[1],96) for x in pred]).flatten()
                 for seg in vad_times:
-                    start = int(seg[0]/frame_len)
-                    end = int(seg[1]/frame_len)
-                    if start>=end:
+                    start = int(seg[0]*100)
+                    end = int(seg[1]*100)
+                    if start>=end or end > len(gender_labels):
                         continue
                     gender_seg = int(np.median(gender_labels[start:end]))
                     gender = {'0':'M','1':'F'}

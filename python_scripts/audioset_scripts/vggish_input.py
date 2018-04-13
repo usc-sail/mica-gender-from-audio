@@ -16,6 +16,7 @@
 """Compute input examples for VGGish from audio waveform."""
 
 import numpy as np
+np.warnings.filterwarnings('ignore')
 import resampy
 from scipy.io import wavfile
 

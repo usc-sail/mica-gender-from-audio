@@ -23,16 +23,23 @@
 
 from __future__ import division
 import os, sys, numpy as np
+np.warnings.filterwarnings('ignore')
 os.environ["CUDA_VISIBLE_DEVICES"]=""
-os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
+os.environ['TF_CPP_MIN_LOG_LEVEL']='3'
+stderr = sys.stderr
+sys.stderr = open(os.devnull, 'w')
+import keras
+sys.stderr = stderr
 from keras.models import load_model
 from scipy import signal as sig
 from kaldi_io import read_mat_scp as rms
 from keras import backend as K
+import warnings
+#warnings.filterwarnings("ignore")
 
 K.set_session(K.tf.Session(config=K.tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1)))
-frame_len, write_dir, scp_file, model_file = sys.argv[1:]
-frame_len = float(frame_len)
+write_dir, scp_file, model_file = sys.argv[1:]
+frame_len = 0.01
 write_post = write_dir + '/' + 'VAD/posteriors/'
 write_ts = write_dir + '/' + 'VAD/timestamps/'
 
