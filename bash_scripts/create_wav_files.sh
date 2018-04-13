@@ -26,7 +26,7 @@ for mov_file in `cat ${movie_paths}`
 do
     base=`basename $mov_file`
     movieName=`echo $base | awk -F '.' '{ print $1 }'` 
-    ffmpeg -i ${mov_file} -ar 8k -ac 1 ${full_wav_dir}/${movieName}.wav &  ## Extract single-channel audio from input sampled at 8000 Hz.
+    ffmpeg -loglevel panic -i ${mov_file} -ar 8k -ac 1 ${full_wav_dir}/${movieName}.wav &  ## Extract single-channel audio from input sampled at 8000 Hz.
     if [ $(($movie_num % $nj )) -eq 0 ]
     then
         wait
