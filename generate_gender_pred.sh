@@ -117,6 +117,7 @@ wait
 ### Create VGGish embeddings
 echo " >>>> CREATING VGGISH EMBEDDINGS <<<< "
 ## Download vggish_model.ckpt file if not exists in python_scripts/audioset_scripts/ directory
+python $py_scripts_dir/download_vggish_ckpt_file.py python_scripts/audioset_scripts/vggish_model.ckpt
 #if ! [ -f $py_scripts_dir/audioset_scripts/vggish_model.ckpt ]; then
 #    wget --load-cookies /tmp/cookies.txt "https://drive.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://drive.google.com/uc?export=download&id=1c-wi6F_Fv0Z0TmJBpSrlTT0iCDmKF_NJ' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=1c-wi6F_Fv0Z0TmJBpSrlTT0iCDmKF_NJ" -O $py_scripts_dir/audioset_scripts/vggish_model.ckpt && rm -rf /tmp/cookies.txt
 #fi

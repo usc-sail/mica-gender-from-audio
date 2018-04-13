@@ -21,7 +21,7 @@ features released in AudioSet).
 """
 
 from __future__ import print_function
-import os, sys, requests
+import os, sys
 import warnings
 warnings.filterwarnings("ignore")
 os.environ["CUDA_VISIBLE_DEVICES"]=""
@@ -41,34 +41,8 @@ import vggish_params
 import vggish_postprocess
 import vggish_slim
 
-def download_file_from_google_drive(file_id, destination):
-    def get_confirm_token(response):
-        for key, value in response.cookies.items():
-            if key.startswith('download_warning'):
-                return value
-        return None
-
-    def save_response_content(response, destination):
-        CHUNK_SIZE = 32768
-        with open(destination, "wb") as f:
-            for chunk in response.iter_content(CHUNK_SIZE):
-                if chunk: # filter out keep-alive new chunks
-                    f.write(chunk)
-
-    URL = "https://docs.google.com/uc?export=download"
-    session = requests.Session()
-    response = session.get(URL, params = { 'id' : file_id }, stream = True)
-    token = get_confirm_token(response)
-    if token:
-        params = { 'id' : file_id, 'confirm' : token }
-        response = session.get(URL, params = params, stream = True)
-    save_response_content(response, destination)
-
 
 def main(_):
-  if not os.path.isfile(checkpoint):
-        print("Downloading VGGish model checkpoint file")
-        download_file_from_google_drive('1c-wi6F_Fv0Z0TmJBpSrlTT0iCDmKF_NJ', checkpoint)
   # In this simple example, we run the examples from a single audio file through
   # the model. If none is provided, we generate a synthetic input.
   # Prepare a postprocessor to munge the model embeddings.
