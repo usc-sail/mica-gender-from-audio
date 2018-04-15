@@ -1,5 +1,5 @@
 # mica-gender-from-audio
-Generate gender and VAD timestamps of audio based on neural network models trained on keras. 
+Generate gender and VAD timestamps of audio based on neural network models trained in Keras. 
 Input must be a text file containing full paths to either mp4/mkv files or wav 
 files, and optionally the path to the directory where all the output will be 
 stored (default=$proj_dir/expt).  
