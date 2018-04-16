@@ -36,10 +36,10 @@ def generate_single_example(example):
 
 def main():
     expt_dir = sys.argv[1]
-    vad_ts_dir = expt_dir + '/VAD/timestamps/'
-    write_post = expt_dir + '/GENDER/posteriors/'
-    write_ts = expt_dir + '/GENDER/timestamps/'
-    feats_path = expt_dir + '/features/vggish/'
+    vad_ts_dir = os.path.join(expt_dir, 'VAD/timestamps/')
+    write_post = os.path.join(expt_dir, 'GENDER/posteriors/')
+    write_ts   = os.path.join(expt_dir, 'GENDER/timestamps/')
+    feats_path = os.path.join(expt_dir, 'features/vggish/')
     
     if not os.path.exists(write_post):
         os.makedirs(write_post)
@@ -66,16 +66,18 @@ def main():
                 context, sequence = generate_single_example(ser_example)
                 [movie, feats] = sess.run([context, sequence])
                 pred = model.predict(feats)
-                fpost = open(write_post + movie + '.post','w')
+
+                fpost = open(os.path.join(write_post, movie + '.post'),'w')
                 for label in pred:
                     fpost.write('{0:0.2f}\n'.format(label[1]))
                 fpost.close()
                 
-                fts = open(write_ts + movie + '.ts','w')
-                vad_data = [x.rstrip().split() for x in open(vad_ts_dir + movie + '.ts', 'r').readlines()]
+                vad_data = [x.rstrip().split() for x in open(os.path.join(vad_ts_dir, movie + '.ts'), 'r').readlines()]
                 vad_times = [[float(x[0]), float(x[1])] for x in vad_data]
                 gender_labels = sig.medfilt(np.round(pred), 3)
                 gender_labels = np.round([np.repeat(x[1],96) for x in pred]).flatten()
+                
+                fts = open(os.path.join(write_ts, movie + '.ts'),'w')
                 for seg in vad_times:
                     start = int(seg[0]*100)
                     end = int(seg[1]*100)

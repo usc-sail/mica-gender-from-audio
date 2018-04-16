@@ -40,8 +40,8 @@ import warnings
 K.set_session(K.tf.Session(config=K.tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1)))
 write_dir, scp_file, model_file = sys.argv[1:]
 frame_len = 0.01
-write_post = write_dir + '/' + 'VAD/posteriors/'
-write_ts = write_dir + '/' + 'VAD/timestamps/'
+write_post = os.path.join(write_dir, 'VAD/posteriors/')
+write_ts   = os.path.join(write_dir, 'VAD/timestamps/')
 
 model = load_model(model_file)
 gen = rms(scp_file)
@@ -54,19 +54,19 @@ for key, mat in gen:
     predictions.extend(pred)
 movie = key.split('_seg')[0]
 
-fw = open(write_ts + movie + '.ts','w')
 labels = np.round(predictions)
 labels_med_filt = sig.medfilt(labels, 55)
 diff = np.diff(labels_med_filt)
 seg_start = [(ind+1)*frame_len for ind in xrange(len(diff)) if diff[ind]==1]
 seg_end = [ind*frame_len for ind in xrange(len(diff)) if diff[ind]==-1]
-
 seg_times = list(zip(seg_start, seg_end))
+
+fw = open(os.path.join(write_ts, movie + '.ts'),'w')
 for segment in seg_times:
     fw.write('{0:0.2f}\t{1:0.2f}\n'.format(segment[0], segment[1]))
 fw.close()
 
-fpost = open(write_post + movie + '.post','w')
+fpost = open(os.path.join(write_post, movie + '.post'),'w')
 for frame in predictions:
     fpost.write('{0:0.2f}\n'.format(frame))
 fpost.close()

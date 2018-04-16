@@ -32,10 +32,11 @@ from scipy.io import wavfile
 config=tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1)
 
 proj_dir, wav_file, write_dir = sys.argv[1:]
-AS_dir = proj_dir + '/python_scripts/audioset_scripts/'
-pca_params = AS_dir + 'vggish_pca_params.npz'
-checkpoint= AS_dir + 'vggish_model.ckpt'
+AS_dir = os.path.join(proj_dir,'python_scripts/audioset_scripts/')
+pca_params = os.path.join(AS_dir,'vggish_pca_params.npz')
+checkpoint= os.path.join(AS_dir,'vggish_model.ckpt')
 sys.path.insert(0,AS_dir)
+
 import vggish_input
 import vggish_params
 import vggish_postprocess
@@ -93,7 +94,7 @@ def main(_):
             }
         )
     )
-    writer = tf.python_io.TFRecordWriter(write_dir + '/' + movie_id + '.tfrecord')
+    writer = tf.python_io.TFRecordWriter(os.path.join(write_dir, movie_id + '.tfrecord'))
     writer.write(seq_example.SerializeToString())
     writer.close()
 
