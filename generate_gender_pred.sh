@@ -80,24 +80,22 @@ fi
 
 proj_dir=$PWD
 cmd="run.pl"
-wav_dir=$expt_dir/wav_segments
-full_wav_dir=$expt_dir/wavs
+wav_dir=$expt_dir/wavs
 feats_dir=$expt_dir/features
 scpfile=$feats_dir/wav.scp
 lists_dir=$feats_dir/scp_lists
 py_scripts_dir=$proj_dir/python_scripts
 vad_model=$PWD/models/vad.h5
 gender_model=$PWD/models/gender.h5
-mkdir -p $wav_dir $full_wav_dir $feats_dir/log $lists_dir $expt_dir/VAD/spk_seg $expt_dir/VAD/timestamps $expt_dir/VAD/posteriors $expt_dir/GENDER/timestamps $expt_dir/GENDER/posteriors 
+mkdir -p $wav_dir $feats_dir/log $lists_dir $expt_dir/VAD/spk_seg $expt_dir/VAD/timestamps $expt_dir/VAD/posteriors $expt_dir/GENDER/timestamps $expt_dir/GENDER/posteriors 
 
 ### Create .wav files given movie_files
 echo " >>>> CREATING WAV FILES <<<< "
 bash_scripts/create_wav_files.sh $movie_list $expt_dir $nj
-bash_scripts/create_scp.sh $wav_dir $scpfile
 
 ### Extract fbank-features
 echo " >>>> EXTRACTING FEATURES FOR VAD <<<< "
-bash_scripts/create_spliced_fbank_feats.sh $feats_dir $nj
+bash_scripts/create_spliced_fbank_feats.sh $wav_dir $feats_dir $nj
 
 ## Generate VAD Labels
 echo " >>>> GENERATING VAD LABELS <<<< "
@@ -113,8 +111,9 @@ do
     movie_count=`expr $movie_count + 1`
 done
 wait
-
+## Perform speaker-segmentation based on BIC
 bash_scripts/speaker_segmentation.sh $movie_list $expt_dir/VAD/wavs $expt_dir/VAD/spk_seg
+
 ### Create VGGish embeddings
 echo " >>>> CREATING VGGISH EMBEDDINGS <<<< "
 ## Download vggish_model.ckpt file if not exists in python_scripts/audioset_scripts/ directory
@@ -123,7 +122,7 @@ python $py_scripts_dir/download_vggish_ckpt_file.py python_scripts/audioset_scri
 #    wget --load-cookies /tmp/cookies.txt "https://drive.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://drive.google.com/uc?export=download&id=1c-wi6F_Fv0Z0TmJBpSrlTT0iCDmKF_NJ' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=1c-wi6F_Fv0Z0TmJBpSrlTT0iCDmKF_NJ" -O $py_scripts_dir/audioset_scripts/vggish_model.ckpt && rm -rf /tmp/cookies.txt
 #fi
 
-ls $full_wav_dir/*.wav  > $expt_dir/wav.list
+ls $wav_dir/*.wav  > $expt_dir/wav.list
 movie_count=1
 for wav_file in `cat $expt_dir/wav.list`
 do
@@ -146,7 +145,7 @@ if [[ "$feats_flag" == "n" ]]; then
     rm -r $feats_dir &
 fi
 if [[ "$wavs_flag" == "n" ]]; then
-    rm -r $full_wav_dir $wav_dir &
+    rm -r $wav_dir &
 fi
 rm $expt_dir/wav.list 
 wait
