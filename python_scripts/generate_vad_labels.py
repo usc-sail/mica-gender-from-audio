@@ -37,9 +37,17 @@ from keras import backend as K
 import warnings
 #warnings.filterwarnings("ignore")
 
+def frame2seg(frames, frame_time_sec=0.01, pos_label=1):
+    pos_idxs = np.where(frames==pos_label)[0]
+    pos_regions = np.split(pos_idxs, np.where(np.diff(pos_idxs)!=1)[0]+1)
+    segments = np.array([[x[0], x[-1]+1] for x in pos_regions])*frame_time_sec
+    return segments
+
+
 K.set_session(K.tf.Session(config=K.tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1)))
 write_dir, scp_file, model_file = sys.argv[1:]
 frame_len = 0.01
+vad_wav_dir = os.path.join(write_dir, 'VAD/wavs') 
 write_post = os.path.join(write_dir, 'VAD/posteriors/')
 write_ts   = os.path.join(write_dir, 'VAD/timestamps/')
 
@@ -56,14 +64,23 @@ movie = key.split('_seg')[0]
 
 labels = np.round(predictions)
 labels_med_filt = sig.medfilt(labels, 55)
-diff = np.diff(labels_med_filt)
-seg_start = [(ind+1)*frame_len for ind in xrange(len(diff)) if diff[ind]==1]
-seg_end = [ind*frame_len for ind in xrange(len(diff)) if diff[ind]==-1]
-seg_times = list(zip(seg_start, seg_end))
+seg_times =frame2seg(labels_med_filt)
+#diff = np.diff(labels_med_filt)
+#seg_start = [(ind+1)*frame_len for ind in xrange(len(diff)) if diff[ind]==1]
+#seg_end = [ind*frame_len for ind in xrange(len(diff)) if diff[ind]==-1]
+#seg_times = list(zip(seg_start, seg_end))
 
-fw = open(os.path.join(write_ts, movie + '.ts'),'w')
+#fvad = open(os.path.join(write_ts, movie + '.vad'),'w')
+fw = open(os.path.join(write_ts, movie + '_wo_ss.ts'),'w')
+if not os.path.exists(os.path.join(vad_wav_dir,movie)):
+    os.makedirs(os.path.join(vad_wav_dir, movie))
+seg_ct = 1
 for segment in seg_times:
-    fw.write('{0:0.2f}\t{1:0.2f}\n'.format(segment[0], segment[1]))
+    if segment[1]-segment[0] > 0.05:
+        fw.write('{0:0.2f}\t{1:0.2f}\n'.format(segment[0], segment[1]))
+        cmd = 'sox {0}.wav -r 16k {1}/{2}_vad-{3:04}.wav trim {4} ={5}'.format(os.path.join(write_dir,'wavs',movie) , os.path.join(vad_wav_dir, movie), movie, seg_ct, segment[0], segment[1])
+        os.system(cmd)
+        seg_ct += 1
 fw.close()
 
 fpost = open(os.path.join(write_post, movie + '.post'),'w')

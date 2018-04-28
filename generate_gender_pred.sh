@@ -53,18 +53,18 @@ nj=16
 ## Input Options
 while getopts ":hw:f:j:" option
 do
-case "${option}"
-in
-h) echo "$usage"
-    exit;;
-f) feats_flag="${OPTARG}";;
-w) wavs_flag="${OPTARG}";;
-j) nj=${OPTARG};;
-\?) echo "Invalid option: -$OPTARG" >&2 
-printf "See below for usage\n\n"
-echo "$usage"
-exit ;;
-esac
+    case "${option}"
+    in
+        h) echo "$usage"
+        exit;;
+        f) feats_flag="${OPTARG}";;
+        w) wavs_flag="${OPTARG}";;
+        j) nj=${OPTARG};;
+        \?) echo "Invalid option: -$OPTARG" >&2 
+        printf "See below for usage\n\n"
+        echo "$usage"
+        exit ;;
+    esac
 done
 
 ## Input Arguments
@@ -88,7 +88,7 @@ lists_dir=$feats_dir/scp_lists
 py_scripts_dir=$proj_dir/python_scripts
 vad_model=$PWD/models/vad.h5
 gender_model=$PWD/models/gender.h5
-mkdir -p $wav_dir $full_wav_dir $feats_dir/log $lists_dir $expt_dir/VAD/timestamps $expt_dir/VAD/posteriors $expt_dir/GENDER/timestamps $expt_dir/GENDER/posteriors
+mkdir -p $wav_dir $full_wav_dir $feats_dir/log $lists_dir $expt_dir/VAD/spk_seg $expt_dir/VAD/timestamps $expt_dir/VAD/posteriors $expt_dir/GENDER/timestamps $expt_dir/GENDER/posteriors 
 
 ### Create .wav files given movie_files
 echo " >>>> CREATING WAV FILES <<<< "
@@ -114,6 +114,7 @@ do
 done
 wait
 
+bash_scripts/speaker_segmentation.sh $movie_list $expt_dir/VAD/wavs $expt_dir/VAD/spk_seg
 ### Create VGGish embeddings
 echo " >>>> CREATING VGGISH EMBEDDINGS <<<< "
 ## Download vggish_model.ckpt file if not exists in python_scripts/audioset_scripts/ directory
@@ -126,6 +127,8 @@ ls $full_wav_dir/*.wav  > $expt_dir/wav.list
 movie_count=1
 for wav_file in `cat $expt_dir/wav.list`
 do
+    movieName=`basename $wav_file .wav`
+    python $py_scripts_dir/spk_seg_to_vad_ts.py $movieName $expt_dir &
     python $py_scripts_dir/compute_and_write_vggish_feats.py $proj_dir $wav_file $feats_dir/vggish &
     if [ $(($movie_count % $nj)) -eq 0 ]; then
         wait
@@ -136,7 +139,7 @@ wait
 
 ### Make gender predictions
 echo " >>>> PREDICTING GENDER SEGMENTS <<<< "
-python $py_scripts_dir/predict_gender_median.py $expt_dir $gender_model
+python $py_scripts_dir/predict_gender.py $expt_dir $gender_model
 
 ## Delete feature files and/or wav files unless otherwise specified
 if [[ "$feats_flag" == "n" ]]; then
