@@ -6,8 +6,7 @@
 ##
 ##      wav_dir     - Directory in which sampled .wav files are 
 ##                      stored
-##      feats_dir   - Directory in which input wav.scp exits, and
-##                      to store all features
+##      feats_dir   - Directory in which to store all features
 ##      nj          - Number of parallel jobs to run
 ##
 
