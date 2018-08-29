@@ -79,12 +79,14 @@ fw = open(os.path.join(write_ts, movie + '_wo_ss.ts'),'w')
 if not os.path.exists(os.path.join(vad_wav_dir,movie)):
     os.makedirs(os.path.join(vad_wav_dir, movie))
 
-for seg_id, segment in enumerate(seg_times):
+seg_ct = 1
+for segment in seg_times:
     if segment[1]-segment[0] > 0.05:
         fw.write('{0:0.2f}\t{1:0.2f}\n'.format(segment[0], segment[1]))
         ## 16kHz audio segments required to perform speaker homogenous segmentation
-        cmd = 'sox -V1 {0}.wav -r 16k {1}/{2}_vad-{3:04}.wav trim {4} ={5}'.format(os.path.join(write_dir,'wavs',movie), os.path.join(vad_wav_dir, movie), movie, seg_id + 1, segment[0], segment[1])
+        cmd = 'sox -V1 {0}.wav -r 16k {1}/{2}_vad-{3:04}.wav trim {4} ={5}'.format(os.path.join(write_dir,'wavs',movie), os.path.join(vad_wav_dir, movie), movie, seg_ct, segment[0], segment[1])
         os.system(cmd)
+        seg_ct += 1
 fw.close()
 
 # Write frame-level posterior probabilities
