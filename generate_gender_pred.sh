@@ -7,22 +7,22 @@
 ##  Generate gender and VAD timestamps based on fbank-BLSTM model trained on keras. 
 ##  Input must be a text file containing full paths to either mp4/mkv files or wav 
 ##  files, and optionally the path to the directory where all the output will be 
-##  stored (default=$proj_dir/expt)
+##  stored (default=$proj_dir/gender_out_dir)
 ##  Output will be a ctm file for each movie, each line of which will contain the 
 ##  start and end times for the speech segment, along with the gender.
 ##  Frame level posteriors are also saved
-##  E.g., ./generate_gender_timestamps.sh movie_path_list.txt expt_dir
+##  E.g., ./generate_gender_pred.sh movie_path_list.txt expt_dir
 ##
 ##  Variables to be aware of:
 ##      nj            : number of jobs to be run in parallel 
-##      expt_dir      : directory where all the output-files will be created
+##      out_dir      : directory where all the output-files will be created
 ##      
 ##  
 ##  Packages/libraries required :
 ##     kaldi          : ensure that all kaldi binaries are added to system path. If not,
 ##                      either add them to system path, or modify kaldi_root in 1st line of
 ##                      'path.sh' to reflect kaldi installation directory.
-##     keras, tensorflow-gpu          :     required to load model and make VAD predictions.
+##     keras, tensorflow              :     required to load model and make VAD predictions.
 ##     re, gzip, struct               :     used by kaldi_io, to read feature files.
 ##     Other python libraries required include numpy, scipy, resampy.
 ##

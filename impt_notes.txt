@@ -1,0 +1,4 @@
+1. Input should be a text file consisting on each separate line complete paths to AV files such as .mp4, .mkv or any other format supported by ffmpeg.
+2. nj - Number of parallel "CPU" threads that are created for each process. Default is set to 8. 
+3. Python script compute_and_write_vggish_feats.py may hang due to memory issues for large audio files (greater than ~2.5 hrs). In such cases, split the input into smaller chunks if possible.
+
