@@ -44,6 +44,8 @@ import warnings
 def frame2seg(frames, frame_time_sec=0.01, pos_label=1):
     pos_idxs = np.where(frames==pos_label)[0]
     pos_regions = np.split(pos_idxs, np.where(np.diff(pos_idxs)!=1)[0]+1)
+    if len(pos_idxs) == 0 or len(pos_regions) == 0:
+        return []
     segments = np.array([[x[0], x[-1]+1] for x in pos_regions])*frame_time_sec
     return segments
 
@@ -70,6 +72,7 @@ movie = key.split('_seg')[0]
 # Post-processing of posteriors
 labels = np.round(predictions)
 labels_med_filt = sig.medfilt(labels, 55)
+print(movie)
 seg_times =frame2seg(labels_med_filt)
 
 # Write start and end VAD timestamps 

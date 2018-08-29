@@ -10,12 +10,13 @@ vad_data = [x.rstrip().split() for x in open(VAD_ts_file,'r').readlines()]
 vad_times = [[float(x[0]), float(x[1])] for x in vad_data]
 fw = open(os.path.join(expt_dir, 'VAD/timestamps/', movie + '.ts'),'w')
 
-for seg in spk_seg_times:
-    vad_num = int(seg[0].split('_vad-')[1])-1
-#    print(vad_num)
-    start = vad_times[vad_num][0] + seg[1]
-    end = vad_times[vad_num][0] + seg[2]
-    fw.write('{} {}\n'.format(start, end))
+if not len(spk_seg_times):
+    for seg in spk_seg_times:
+        vad_num = int(seg[0].split('_vad-')[1])-1
+    #    print(vad_num)
+        start = vad_times[vad_num][0] + seg[1]
+        end = vad_times[vad_num][0] + seg[2]
+        fw.write('{} {}\n'.format(start, end))
 
 fw.close()
     
