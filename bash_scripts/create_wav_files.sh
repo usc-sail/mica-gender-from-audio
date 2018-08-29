@@ -19,7 +19,7 @@ nj=${3}
 movie_num=1
 for mov_file in `cat ${movie_paths}`
 do
-    base=`basename $mov_file`
+    base=`basename -- $mov_file`
     movie_name=`echo $base | awk -F '.' '{ print $1 }'` 
 
     ffmpeg -loglevel panic -i ${mov_file} -ar 8k -ac 1 ${wav_dir}/${movie_name}.wav &  ## Extract single-channel audio from input sampled at 8000 Hz.
