@@ -72,7 +72,6 @@ movie = key.split('_seg')[0]
 # Post-processing of posteriors
 labels = np.round(predictions)
 labels_med_filt = sig.medfilt(labels, 55)
-print(movie)
 seg_times =frame2seg(labels_med_filt)
 
 # Write start and end VAD timestamps 
@@ -84,7 +83,7 @@ for seg_id, segment in enumerate(seg_times):
     if segment[1]-segment[0] > 0.05:
         fw.write('{0:0.2f}\t{1:0.2f}\n'.format(segment[0], segment[1]))
         ## 16kHz audio segments required to perform speaker homogenous segmentation
-        cmd = 'sox {0}.wav -r 16k {1}/{2}_vad-{3:04}.wav trim {4} ={5}'.format(os.path.join(write_dir,'wavs',movie), os.path.join(vad_wav_dir, movie), movie, seg_id + 1, segment[0], segment[1])
+        cmd = 'sox -V1 {0}.wav -r 16k {1}/{2}_vad-{3:04}.wav trim {4} ={5}'.format(os.path.join(write_dir,'wavs',movie), os.path.join(vad_wav_dir, movie), movie, seg_id + 1, segment[0], segment[1])
         os.system(cmd)
 fw.close()
 
