@@ -3,7 +3,6 @@
 ###     log-Mel features as input
 ###
 ###     INPUTS:
-###     frame_len    -  Length of single feature-frame in seconds
 ###     write_dir    -  Directory in which to write all output files
 ###     scp_file     -  Kaldi feature file in .scp format
 ###     model_file   -  VAD model file trained on keras
@@ -37,6 +36,11 @@ from keras import backend as K
 import warnings
 #warnings.filterwarnings("ignore")
 
+
+##
+##  Convert frame-level posteriors into 
+##  continuous segments of regions where post=pos_label
+##
 def frame2seg(frames, frame_time_sec=0.01, pos_label=1):
     pos_idxs = np.where(frames==pos_label)[0]
     pos_regions = np.split(pos_idxs, np.where(np.diff(pos_idxs)!=1)[0]+1)
@@ -55,6 +59,7 @@ model = load_model(model_file)
 gen = rms(scp_file)
 
 predictions = []
+# Generate VAD posteriors using pre-trained VAD model
 for key, mat in gen:
     mat = mat.reshape(mat.shape[0],16,23)
     pred = model.predict(mat, batch_size=50, verbose=0)
@@ -62,27 +67,25 @@ for key, mat in gen:
     predictions.extend(pred)
 movie = key.split('_seg')[0]
 
+# Post-processing of posteriors
 labels = np.round(predictions)
 labels_med_filt = sig.medfilt(labels, 55)
 seg_times =frame2seg(labels_med_filt)
-#diff = np.diff(labels_med_filt)
-#seg_start = [(ind+1)*frame_len for ind in xrange(len(diff)) if diff[ind]==1]
-#seg_end = [ind*frame_len for ind in xrange(len(diff)) if diff[ind]==-1]
-#seg_times = list(zip(seg_start, seg_end))
 
-#fvad = open(os.path.join(write_ts, movie + '.vad'),'w')
+# Write start and end VAD timestamps 
 fw = open(os.path.join(write_ts, movie + '_wo_ss.ts'),'w')
 if not os.path.exists(os.path.join(vad_wav_dir,movie)):
     os.makedirs(os.path.join(vad_wav_dir, movie))
-seg_ct = 1
-for segment in seg_times:
+
+for seg_id, segment in enumerate(seg_times):
     if segment[1]-segment[0] > 0.05:
         fw.write('{0:0.2f}\t{1:0.2f}\n'.format(segment[0], segment[1]))
-        cmd = 'sox {0}.wav -r 16k {1}/{2}_vad-{3:04}.wav trim {4} ={5}'.format(os.path.join(write_dir,'wavs',movie) , os.path.join(vad_wav_dir, movie), movie, seg_ct, segment[0], segment[1])
+        ## 16kHz audio segments required to perform speaker homogenous segmentation
+        cmd = 'sox {0}.wav -r 16k {1}/{2}_vad-{3:04}.wav trim {4} ={5}'.format(os.path.join(write_dir,'wavs',movie), os.path.join(vad_wav_dir, movie), movie, seg_id + 1, segment[0], segment[1])
         os.system(cmd)
-        seg_ct += 1
 fw.close()
 
+# Write frame-level posterior probabilities
 fpost = open(os.path.join(write_post, movie + '.post'),'w')
 for frame in predictions:
     fpost.write('{0:0.2f}\n'.format(frame))

@@ -42,7 +42,6 @@ do
     ## Final segment
     segnum=`printf "%05d" $((n+1))`
     echo "${movie_name}_seg-${segnum} $movie_name $n $movie_time" >> $segments
-
     echo $movie_name" "$r
 done > $scp
 
@@ -66,7 +65,7 @@ done
     compute-fbank-feats --verbose=2 --sample-frequency=8000 ark,p:- ark,p:- \| \
     copy-feats --compress=true ark,p:- \
         ark,scp,p:$fbank_dir/raw_fbank_feats.JOB.ark,$fbank_dir/raw_fbank_feats.JOB.scp \
- || exit 1;
+# || exit 1;
 
 ## Combine multiple fbank files and delete segment split files
 rm $log_dir/segments* 2>/dev/null 

@@ -5,17 +5,16 @@
 ##
 ##      Arguments :
 ##      movie_paths :  List of paths to input files to process
-##      expt_dir    :  Directory in which to store all output files 
+##      wav_dir     :  Directory in which to store complete audio files 
 ##      nj          :  Number of parallel jobs to process
 ##
 ##
 
 
 movie_paths=${1}
-expt_dir=${2}
+wav_dir=${2}
 nj=${3}
 
-wav_dir=$expt_dir/wavs             ## Directory in which to store complete audio files
 
 movie_num=1
 for mov_file in `cat ${movie_paths}`

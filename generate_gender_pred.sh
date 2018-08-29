@@ -30,7 +30,8 @@
 ##
 
 
-usage="Script to identify gender from audio
+## Define usage of script
+usage="Perform gender identification from audio
 Usage: $(basename "$0") [-h] [-w y/n] [-f y/n] [-j num_jobs] movie_paths.txt (out_dir)
 e.g.: $(basename "$0") -w y -f y -nj 8 demo.txt DEMO
 
@@ -48,9 +49,15 @@ if [ -f path.sh ]; then . ./path.sh; fi
 ## Default Options
 feats_flag="n"
 wavs_flag="n"
-nj=16
+nj=8
 
 ## Input Options
+if [ $# -eq 0 ];
+then
+    echo "$usage"
+    exit
+fi
+
 while getopts ":hw:f:j:" option
 do
     case "${option}"
@@ -76,10 +83,8 @@ else
     expt_dir=gender_out_dir
 fi
 
-#printf "nj=$nj\nexpt_dir=$expt_dir\nmovie_list=$movie_list\n"
 
 proj_dir=$PWD
-cmd="run.pl"
 wav_dir=$expt_dir/wavs
 feats_dir=$expt_dir/features
 scpfile=$feats_dir/wav.scp
@@ -87,11 +92,11 @@ lists_dir=$feats_dir/scp_lists
 py_scripts_dir=$proj_dir/python_scripts
 vad_model=$PWD/models/vad.h5
 gender_model=$PWD/models/gender.h5
-mkdir -p $wav_dir $feats_dir/log $lists_dir $expt_dir/VAD/spk_seg $expt_dir/VAD/timestamps $expt_dir/VAD/posteriors $expt_dir/GENDER/timestamps $expt_dir/GENDER/posteriors 
+mkdir -p $wav_dir $feats_dir/log $lists_dir $expt_dir/VAD/{spk_seg,timestamps,posteriors} $expt_dir/GENDER/{timestamps,posteriors} 
 
 ### Create .wav files given movie_files
 echo " >>>> CREATING WAV FILES <<<< "
-bash_scripts/create_wav_files.sh $movie_list $expt_dir $nj
+bash_scripts/create_wav_files.sh $movie_list $wav_dir $nj
 
 ### Extract fbank-features
 echo " >>>> EXTRACTING FEATURES FOR VAD <<<< "
@@ -118,9 +123,6 @@ bash_scripts/speaker_segmentation.sh $movie_list $expt_dir/VAD/wavs $expt_dir/VA
 echo " >>>> CREATING VGGISH EMBEDDINGS <<<< "
 ## Download vggish_model.ckpt file if not exists in python_scripts/audioset_scripts/ directory
 python $py_scripts_dir/download_vggish_ckpt_file.py python_scripts/audioset_scripts/vggish_model.ckpt
-#if ! [ -f $py_scripts_dir/audioset_scripts/vggish_model.ckpt ]; then
-#    wget --load-cookies /tmp/cookies.txt "https://drive.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://drive.google.com/uc?export=download&id=1c-wi6F_Fv0Z0TmJBpSrlTT0iCDmKF_NJ' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=1c-wi6F_Fv0Z0TmJBpSrlTT0iCDmKF_NJ" -O $py_scripts_dir/audioset_scripts/vggish_model.ckpt && rm -rf /tmp/cookies.txt
-#fi
 
 ls $wav_dir/*.wav  > $expt_dir/wav.list
 movie_count=1
