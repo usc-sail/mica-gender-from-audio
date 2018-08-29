@@ -76,8 +76,8 @@ done > $feats_dir/feats.scp
 ### 
 ###     Apply mean and variance normalization to filterbank features.
 ###
-compute-cmvn-stats scp:$feats_dir/feats.scp ark,scp,t:$feats_dir/cmvn_stats.ark,$feats_dir/cmvn_stats.scp  
-apply-cmvn --norm-vars=true scp:$feats_dir/cmvn_stats.scp scp,p:$feats_dir/feats.scp ark,scp,t:$feats_dir/norm_feats.ark,$feats_dir/norm_feats.scp 
+compute-cmvn-stats scp:$feats_dir/feats.scp ark,scp,t:$feats_dir/cmvn_stats.ark,$feats_dir/cmvn_stats.scp 2>/dev/null
+apply-cmvn --norm-vars=true scp:$feats_dir/cmvn_stats.scp scp,p:$feats_dir/feats.scp ark,scp,t:$feats_dir/norm_feats.ark,$feats_dir/norm_feats.scp 2>/dev/null
 
 ###
 ###     Splice features with +/- 15 frames context
