@@ -1,4 +1,33 @@
 1. Input should be a text file consisting on each separate line complete paths to AV files such as .mp4, .mkv or any other format supported by ffmpeg.
-2. nj - Number of parallel "CPU" threads that are created for each process. Default is set to 8. 
+2. nj - Number of parallel "CPU" threads that are created for each process. Default is set to 8. Typically will result in error if a single file is too small (< nj seconds), so be wary of that.
 3. Python script compute_and_write_vggish_feats.py may hang due to memory issues for large audio files (greater than ~2.5 hrs). In such cases, split the input into smaller chunks if possible.
+
+
+Packages required:
+audio - ffmpeg, sox,
+kaldi (use path.sh in project directory to indicate paths to kaldi libraries)
+Python - resampy, numpy, scipy, tensorflow, keras
+
+
+
+
+Scripts covered by different output segments:
+>>>> CREATING WAV FILES <<<<          : create_wav_files.sh
+>>>> EXTRACTING FEATURES FOR VAD <<<< : create_spliced_fbank_feats.sh 
+>>>> GENERATING VAD LABELS <<<<       : generate_vad_labels.py,  speaker_segmentation.sh
+>>>> CREATING VGGISH EMBEDDINGS <<<<  : download_vggish_ckpt_file.py, spk_seg_to_vad_ts.py, compute_and_write_vggish_feats.py
+>>>> PREDICTING GENDER SEGMENTS <<<<  : predict_gender.py
+
+Basic outline of function of different scripts:
+create_wav_files.sh           :  Creates audio files (.wav format) from input media files. Audio is single-channel, sampled at 8kHz
+create_spliced_fbank_feats.sh :  Uses created .wav files and kaldi binaries to create audio features to be used for Voiced Activity Detection. Beware of errors due to corrupted audio files.
+generate_vad_labels.py        :  Reads audio features using kaldi_io.py, and uses vad_model.h5 to predict speech segments. Also creates additional .wav files per speech segment, for the next module (speaker segmentation)
+speaker_segmentation.sh       :  Performs speaker-homogenous segmentation of speech segments
+download_vggish_ckpt_file.py  :  Only executed if project directory does not contain the required file ($proj_dir/python_scripts/audioset_scripts/vggish_model.ckpt)
+spk_seg_to_vad_ts.py          :  Modify speaker_segmentation output file to match required format of timestamps
+compute_and_write_vggish_feats.py : Uses vggish_model.ckpt file and .wav files created originally to produce audio input features for gender identification system. Be aware of memory overload due to long audio files.
+predict_gender.py             :  Makes predictions using gender_model.h5 and processed input features, and combines with VAD timestamps to output gender timestamps
+
+
+
 
