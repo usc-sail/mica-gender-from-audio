@@ -49,8 +49,10 @@ def frame2seg(frames, frame_time_sec=0.01, pos_label=1):
     segments = np.array([[x[0], x[-1]+1] for x in pos_regions])*frame_time_sec
     return segments
 
+def normalize(data):
+    return np.divide(np.subtract(data, np.mean(data)), np.std(data))
 
-K.set_session(K.tf.Session(config=K.tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1)))
+K.set_session(K.tf.Session(config=K.tf.ConfigProto(intra_op_parallelism_threads=8, inter_op_parallelism_threads=8)))
 write_dir, scp_file, model_file = sys.argv[1:]
 frame_len = 0.01
 vad_wav_dir = os.path.join(write_dir, 'VAD/wavs') 
@@ -60,40 +62,44 @@ write_ts   = os.path.join(write_dir, 'VAD/timestamps/')
 model = load_model(model_file)
 gen = rms(scp_file)
 
-predictions = []
 # Generate VAD posteriors using pre-trained VAD model
 for key, mat in gen:
-    mat = mat.reshape(mat.shape[0],16,23)
-    pred = model.predict(mat, batch_size=50, verbose=0)
-    pred = [x[1] for x in pred]
-    predictions.extend(pred)
-movie = key.split('_seg')[0]
+    predictions = []
+    movie = key
+#    fts = normalize(mat)
+    fts = mat
+    num_seg = int(len(fts)//64)
+    for i in range(num_seg):
+        feats_seg = normalize(fts[i*64:(i+1)*64])
+        pred = model.predict(feats_seg.reshape((1, 64, 64, 1)), verbose=0)
+#        pred = [x[1] for x in pred]
+        predictions.append(pred[0][1])
+#movie = keybz.split('_seg')[0]
 
-# Post-processing of posteriors
-labels = np.round(predictions)
-labels_med_filt = sig.medfilt(labels, 55)
-seg_times =frame2seg(labels_med_filt)
+    # Post-processing of posteriors
+    labels = np.array([np.repeat(x, 64) for x in predictions]).flatten()
+    seg_times = frame2seg(np.round(labels))
+#    print(labels)
+ #   print(seg_times)
+    # Write start and end VAD timestamps 
+    fw = open(os.path.join(write_ts, movie + '_wo_ss.ts'),'w')
+    if not os.path.exists(os.path.join(vad_wav_dir,movie)):
+        os.makedirs(os.path.join(vad_wav_dir, movie))
 
-# Write start and end VAD timestamps 
-fw = open(os.path.join(write_ts, movie + '_wo_ss.ts'),'w')
-if not os.path.exists(os.path.join(vad_wav_dir,movie)):
-    os.makedirs(os.path.join(vad_wav_dir, movie))
+    seg_ct = 1
+    for segment in seg_times:
+        if segment[1]-segment[0] > 0.05:
+            fw.write('{0}_vad-{1:04}\t{0}\t{2:0.2f}\t{3:0.2f}\n'.format(movie, seg_ct, segment[0], segment[1]))
+            ## 16kHz audio segments required to perform speaker homogenous segmentation
+ #           cmd = 'sox -V1 {0}.wav -r 16k {1}/{2}_vad-{3:04}.wav trim {4} ={5}'.format(os.path.join(write_dir,'wavs',movie), os.path.join(vad_wav_dir, movie), movie, seg_ct, segment[0], segment[1])
+  #          os.system(cmd)
+            seg_ct += 1
+    fw.close()
 
-seg_ct = 1
-for segment in seg_times:
-    if segment[1]-segment[0] > 0.05:
-        fw.write('{0:0.2f}\t{1:0.2f}\n'.format(segment[0], segment[1]))
-        ## 16kHz audio segments required to perform speaker homogenous segmentation
-        cmd = 'sox -V1 {0}.wav -r 16k {1}/{2}_vad-{3:04}.wav trim {4} ={5}'.format(os.path.join(write_dir,'wavs',movie), os.path.join(vad_wav_dir, movie), movie, seg_ct, segment[0], segment[1])
-        os.system(cmd)
-        seg_ct += 1
-fw.close()
+    # Write frame-level posterior probabilities
+    fpost = open(os.path.join(write_post, movie + '.post'),'w')
+    for frame in predictions:
+        fpost.write('{0:0.2f}\n'.format(frame))
+    fpost.close()
 
-# Write frame-level posterior probabilities
-fpost = open(os.path.join(write_post, movie + '.post'),'w')
-for frame in predictions:
-    fpost.write('{0:0.2f}\n'.format(frame))
-fpost.close()
-
-fw.close()
-fpost.close()
+    fw.close()

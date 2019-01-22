@@ -1,3 +1,22 @@
+###
+###
+###     Script to predict gender of audio segment
+###     using vggish-embeddings extracted at 0.96s
+###     frame-level
+###     
+###     Arguments:
+###     1) expt_dir   : Output directory which contains
+###         'features' and 'VAD' directories
+###     2) model_file : Gender model trained on Keras.
+###
+###     Output:
+###     1) timestamps-file : in the format 
+###         "start-time(s) end-time(s) Gender(M/F)"
+###         for each audio file
+###     2) posterior-file  : Gender model output 
+###         at frame-level for each file (0-->M, 1-->F)
+###
+
 import numpy as np
 np.warnings.filterwarnings('ignore')
 import os, sys
@@ -58,7 +77,7 @@ def main():
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(coord=coord)
         model = load_model(sys.argv[2])
-
+        gender = {'0':'M','1':'F'}
         used = []
 
         while 1:
@@ -78,14 +97,14 @@ def main():
                 gender_labels = np.round([np.repeat(x[1],96) for x in pred]).flatten()
                 
                 fts = open(os.path.join(write_ts, movie + '.ts'),'w')
+
                 for seg in vad_times:
                     start = int(seg[0]*100)
                     end = int(seg[1]*100)
                     if start>=end or end > len(gender_labels):
                         continue
                     gender_seg = int(np.median(gender_labels[start:end]))
-                    gender = {'0':'M','1':'F'}
-                    fts.write('{}\t{}\t{}\n'.format(seg[0],seg[1],gender[str(gender_seg)]))
+                    fts.write('{}\t{}\t{}\n'.format(seg[0], seg[1], gender[str(gender_seg)]))
                 fts.close()
             except:
                 coord.request_stop()

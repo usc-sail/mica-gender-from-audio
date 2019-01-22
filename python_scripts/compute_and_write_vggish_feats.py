@@ -21,7 +21,7 @@ features released in AudioSet).
 """
 
 from __future__ import print_function
-import os, sys
+import os, sys, numpy as np
 import warnings
 warnings.filterwarnings("ignore")
 os.environ["CUDA_VISIBLE_DEVICES"]=""
@@ -29,7 +29,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL']='3'
 import tensorflow as tf
 from scipy.io import wavfile
 
-config=tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1)
+config=tf.ConfigProto(intra_op_parallelism_threads=8, inter_op_parallelism_threads=8)
 
 proj_dir, wav_file, write_dir = sys.argv[1:]
 AS_dir = os.path.join(proj_dir,'python_scripts/audioset_scripts/')
@@ -62,9 +62,17 @@ def main(_):
     movie_id = wav_file[wav_file.rfind('/')+1:wav_file.rfind('.')]
 
     examples_batch = vggish_input.wavfile_to_examples(wav_file)
-    [embedding_batch] = sess.run([embedding_tensor],
-                                 feed_dict={features_tensor: examples_batch})
-    postprocessed_batch = pproc.postprocess(embedding_batch)
+    num_splits = min(int(examples_batch.shape[0]/10), 100)
+    num_splits = max(1, num_splits)
+    examples_batch = np.array_split(examples_batch, num_splits)
+
+    embedding_batch = []
+    for i in range(num_splits):
+        [batch] = sess.run([embedding_tensor],
+                                 feed_dict={features_tensor: examples_batch[i]})
+        embedding_batch.extend(batch)
+
+    postprocessed_batch = pproc.postprocess(np.array(embedding_batch))
 
     # Write the postprocessed embeddings as a SequenceExample, in a similar
     # format as the features released in AudioSet. Each row of the batch of
