@@ -1,22 +1,28 @@
-###
-###
-###     Script to predict gender of audio segment
-###     using vggish-embeddings extracted at 0.96s
-###     frame-level
-###     
-###     Arguments:
-###     1) expt_dir   : Output directory which contains
-###         'features' and 'VAD' directories
-###     2) model_file : Gender model trained on Keras.
-###
-###     Output:
-###     1) timestamps-file : in the format 
-###         "start-time(s) end-time(s) Gender(M/F)"
-###         for each audio file
-###     2) posterior-file  : Gender model output 
-###         at frame-level for each file (0-->M, 1-->F)
-###
+'''
+Author/year: Rajat Hebbar, 2018
 
+For model evaluations and baseline, see: 
+
+Predict frame-level gender of an audio segment (agnostic of speech) using
+vggish-embeddings extracted for segments of length 0.96s
+     
+Input:
+    1) expt_dir : parent directory which contains 'features' and 'VAD' directories
+    2) model_file : pre-trained Keras (TF backend) model to predict gender for a
+                    segment
+
+Output:
+    1) timestamps-file : writes out a .ts file for each wav file with the following format
+                        <start-time-in-sec>\t<end_time-in-sec>\t<M/F>
+    2) posterior-file  : predicted gender posterior (probability of female speaker)
+                        from the model at frame level i.e., 0=M, 1=F
+
+Usage:
+    
+
+Example
+
+'''
 import numpy as np
 np.warnings.filterwarnings('ignore')
 import os, sys
@@ -70,7 +76,7 @@ def main():
     reader = tf.TFRecordReader()
     file_queue = tf.train.string_input_producer(tfr_paths, num_epochs=1, shuffle=False)
     with tf.Session(config=config) as sess:
-        K.set_session(sess)
+        K.tensorflow_backend.set_session(sess)
         _, ser_example = reader.read(file_queue)
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
