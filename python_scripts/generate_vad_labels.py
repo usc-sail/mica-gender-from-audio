@@ -53,8 +53,11 @@ def normalize(data):
     return np.divide(np.subtract(data, np.mean(data)), np.std(data))
 
 K.set_session(K.tf.Session(config=K.tf.ConfigProto(intra_op_parallelism_threads=8, inter_op_parallelism_threads=8)))
-write_dir, scp_file, model_file = sys.argv[1:]
-frame_len = 0.01
+write_dir, scp_file, model_file = sys.argv[1:-1]
+overlap = float(sys.argv[-1])
+assert overlap >=0 and overlap <1, "Invalid choice of overlap, should be 0 <= overlap < 1"
+num_frames, num_freq_bins = (64, 64)
+shift = num_frames - int(overlap*num_frames)
 vad_wav_dir = os.path.join(write_dir, 'VAD/wavs') 
 write_post = os.path.join(write_dir, 'VAD/posteriors/')
 write_ts   = os.path.join(write_dir, 'VAD/timestamps/')
@@ -64,17 +67,21 @@ gen = rms(scp_file)
 
 # Generate VAD posteriors using pre-trained VAD model
 for movie, fts in gen:
-    predictions = []
-    num_seg = int(len(fts)//64)
+    num_seg = int((len(fts) - num_frames) // shift)
+    pred = [ [] for _ in range(fts.shape[0]) ]
+   #num_seg = int(len(fts)//64)
     for i in range(num_seg):
-        feats_seg = normalize(fts[i*64:(i+1)*64])
-        pred = model.predict(feats_seg.reshape((1, 64, 64, 1)), verbose=0)
+        feats_seg = normalize(fts[i*shift : i*shift + num_frames])
+        p = model.predict(feats_seg.reshape((1, num_frames, num_freq_bins, 1)), verbose=0)
+        for j in range(i*shift, i*shift + num_frames):
+            pred[j].extend([p[0][1]])
 #        pred = [x[1] for x in pred]
-        predictions.append(pred[0][1])
+    predictions = np.array([np.median(pred[i]) if pred[i]!=[] else 0 for i in range(fts.shape[0])])
 #movie = keybz.split('_seg')[0]
 
     # Post-processing of posteriors
-    labels = np.array([np.repeat(x, 64) for x in predictions]).flatten()
+#    labels = np.array([np.repeat(x, 64) for x in predictions]).flatten()
+    labels = np.round(predictions)
     seg_times = frame2seg(np.round(labels))
 #    print(labels)
  #   print(seg_times)
