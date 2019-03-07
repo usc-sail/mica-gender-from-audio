@@ -52,7 +52,7 @@ def frame2seg(frames, frame_time_sec=0.01, pos_label=1):
 def normalize(data):
     return np.divide(np.subtract(data, np.mean(data)), np.std(data))
 
-K.tensorflow_backend.set_session(K.tf.Session(config=K.tf.ConfigProto(intra_op_parallelism_threads=8, inter_op_parallelism_threads=8)))
+K.set_session(K.tf.Session(config=K.tf.ConfigProto(intra_op_parallelism_threads=8, inter_op_parallelism_threads=8)))
 write_dir, scp_file, model_file = sys.argv[1:]
 frame_len = 0.01
 vad_wav_dir = os.path.join(write_dir, 'VAD/wavs') 
