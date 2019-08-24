@@ -165,7 +165,7 @@ do
      compute-mfcc-feats ark:- ark:- 2>>$logfile | \
       spk-seg --bic-alpha=1.1 ark:- $expt_dir/VAD/spk_seg/$movieName.seg 2>>$logfile
     python $py_scripts_dir/spk_seg_to_vad_ts.py $movieName $expt_dir & 
-    python $py_scripts_dir/compute_and_write_vggish_feats.py $proj_dir $wav_file $feats_dir/vggish $gender_overlap &
+    python $py_scripts_dir/extract_vggish_feats.py $proj_dir $wav_file $feats_dir/vggish $gender_overlap &
     if [ $(($movie_count % $nj)) -eq 0 ]; then
         wait
     fi
