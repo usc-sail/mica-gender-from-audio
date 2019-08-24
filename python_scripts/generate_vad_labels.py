@@ -96,7 +96,7 @@ def main():
         for segment in seg_times:
         # Threshold to 50ms minimum segment duration
             if segment[1]-segment[0] > 0.05:
-                fw.write('{0}_vad-{1:04}\t{0}\t{2:0.2f}\t{3:0.2f}\n'.format(movie, seg_ct, segment[0], segment[1]))
+                fw.write('{0}_vad-{1:04} {0} {2:0.2f} {3:0.2f}\n'.format(movie, seg_ct, segment[0], segment[1]))
                 seg_ct += 1
         fw.close()
 
