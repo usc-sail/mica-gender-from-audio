@@ -1,13 +1,20 @@
 #!/bin/bash
+
 ## 
+##  Author/year: Rajat Hebbar, 2019
 ##
 ##  Extract 64D log-Mel filterbank energy features
 ##
-##  Arguments :
-##
+##  Input 
 ##      wav_dir     - Directory in which .wav files are stored
 ##      feats_dir   - Directory in which to store features
 ##      nj          - Number of parallel jobs to run
+##
+##  Usage
+##      bash create_logmel_feats.sh [wav_dir] [feats_dir] [nj]
+##
+##  Example
+##      bash create_logmel_feats.sh gender_out_dir/wavs gender_out_dir/features 4  
 ##
 
 wav_dir=$1

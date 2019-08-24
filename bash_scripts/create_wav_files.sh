@@ -1,13 +1,20 @@
+#!/bin/bash
+
 ##
+##  Author/year: Rajat Hebbar, 2019
 ##
-##      Extract audio (mono,sampled at 16kHz) from given AV files
+##  Extract audio (mono,sampled at 16kHz) from given AV files
 ##
-##
-##      Arguments :
+##  Input
 ##      movie_paths :  List of paths to input files to process
 ##      wav_dir     :  Directory in which to store audio files 
 ##      nj          :  Number of parallel jobs to process
 ##
+##  Usage
+##      bash create_wav_files.sh [movie_paths] [wav_dir] [nj]
+##  
+##  Example
+##      bash create_wav_files.sh movie_files.txt gender_out_dir/wavs 4
 ##
 
 
