@@ -31,7 +31,9 @@ from scipy.io import wavfile
 
 config=tf.ConfigProto(intra_op_parallelism_threads=8, inter_op_parallelism_threads=8)
 
-proj_dir, wav_file, write_dir = sys.argv[1:]
+proj_dir, wav_file, write_dir = sys.argv[1:-1]
+overlap = float(sys.argv[-1])
+
 AS_dir = os.path.join(proj_dir,'python_scripts/audioset_scripts/')
 pca_params = os.path.join(AS_dir,'vggish_pca_params.npz')
 checkpoint= os.path.join(AS_dir,'vggish_model.ckpt')
@@ -48,6 +50,7 @@ def main(_):
   # the model. If none is provided, we generate a synthetic input.
   # Prepare a postprocessor to munge the model embeddings.
   pproc = vggish_postprocess.Postprocessor(pca_params)
+  vggish_params.EXAMPLE_HOP_SECONDS = (1-overlap)*vggish_params.EXAMPLE_WINDOW_SECONDS
 
   # If needed, prepare a record writer_dict to store the postprocessed embeddings.
 
