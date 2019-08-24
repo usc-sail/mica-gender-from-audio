@@ -1,14 +1,25 @@
-###
-###
-###     Modified version of AudioSet feature extraction 
-###     script. Extract 128-dimensional embeddings of 
-###     non-overlapping 0.96s audio segments. 
-###     
-###     Arguments:
-###         expt_dir    -   Project directory where main script is executed.
-###         wav_file    -   path to single audio file.
-###         write_dir   -   Directory in which output files are stored.
-###
+from __future__ import print_function
+
+'''
+Modified version of AudioSet feature extraction script. 
+Extract 128-dimensional embeddings of non-overlapping 0.96s audio segments. 
+     
+Input
+    1) proj_dir    : project directory where main script is executed.
+    2) wav_file    : path to single audio file.
+    3) write_dir   : directory in which output files are stored.
+    4) overlap     : fraction overlap of segments during inference of gender ID labels
+
+Output 
+    1) {file_id}.tfrecord   : VGGish features of 128-dimension 
+
+Usage
+    python extract_vggish_feats.py [proj_dir] [wav_file] [write_dir] [overlap]
+
+Example
+    python extract_vggish_feats.py . gender_out_dir/wavs/temp.wav gender_out_dir/features/vggish 0.5
+
+'''
 
 """ A simple demonstration of running VGGish in inference mode.
 
@@ -20,7 +31,6 @@ features released in AudioSet).
 
 """
 
-from __future__ import print_function
 import os, sys, numpy as np
 import warnings
 warnings.filterwarnings("ignore")
