@@ -1,29 +1,31 @@
 '''
-Author/year: Rajat Hebbar, 2018
-
-For model evaluations and baseline, see: 
+Author/year: Rajat Hebbar, 2019
 
 Predict frame-level gender of an audio segment (agnostic of speech) using
 vggish-embeddings extracted for segments of length 0.96s
      
-Input:
+Input
     1) expt_dir   : parent directory which contains 'features' and 'VAD' directories
     2) model_file : pre-trained Keras (TF backend) model to predict gender for a
                     segment
-    3) overlap    : fraction overlap of features during inference of gender ID labels
+    3) overlap    : fraction overlap of segments during inference of gender ID labels
 
-Output:
-    1) timestamps-file : writes out a .ts file for each wav file with the following format
+Output
+    1) timestamps-file : '.ts' ext file for each input file consisting of SAD segments 
+                         labelled with gender ID in the following format:
                         <start-time-in-sec>\t<end_time-in-sec>\t<M/F>
-    2) posterior-file  : predicted gender posterior (probability of female speaker)
-                        from the model at frame level i.e., 0=M, 1=F
+    2) posterior-file  : '.post' ext file for each input file consisting of gender ID 
+                         posteriors (probability of female speaker)
+                        from the model at frame level i.e., 0=M, 1=F at 100 fps
 
-Usage:
-    
+Usage
+   python predict_gender.py [expt_dir] [model_file] [overlap]
 
 Example
+   python predict_gender.py gender_out_dir models/gender.h5 0.5
 
 '''
+
 import numpy as np
 np.warnings.filterwarnings('ignore')
 import os, sys, glob 
