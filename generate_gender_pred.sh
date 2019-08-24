@@ -18,9 +18,10 @@
 ##      nj            : number of jobs to be run in parallel 
 ##      feats_flag    : 'y' if you want to retain feature files after execution
 ##      wavs_flag     : 'y' if you want to retain '.wav' audio files after execution
-##      overlap       : % overlap of segments during SAD inference (0-1, i.e, 0 for no overlap, 
-##                      1 for complete overlap)
 ##  
+##  Read the default config file (./config.sh) for more details about user-defined variables
+##  for inference.
+##
 ##  Packages/libraries required :
 ##     kaldi          : ensure that all kaldi binaries are added to system path. If not,
 ##                      either add them to system path, or modify kaldi_root in 1st line of
@@ -34,15 +35,15 @@
 
 ## Define usage of script
 usage="Perform gender identification from audio
-Usage: bash $(basename "$0") [-h] [-w y/n] [-f y/n] [-j num_jobs] [-o overlap] movie_paths.txt (out_dir)
-e.g.: bash $(basename "$0") -w y -f y -nj 8 -o 0.5 demo.txt DEMO
+Usage: bash $(basename "$0") [-h] [-w y/n] [-f y/n] [-j num_jobs] [-c config_file] movie_paths.txt (out_dir)
+e.g.: bash $(basename "$0") -w y -f y -nj 8 -c config.sh demo.txt DEMO
 
 where:
 -h                  : Show help 
 -w                  : Store wav files after processing (default: n)
 -f                  : Store feature files after processing (default: n)
--j                 : Number of parallel jobs to run (default: 16)
--o                  : Percentage overlap of segments during SAD (0-1) (default: 0)
+-j                  : Number of parallel jobs to run (default: 16)
+-c                  : Config file (default: ./config.sh)
 movie_paths.txt     : Text file consisting of complete paths to media files (eg, .mp4/.mkv) on each line 
 out_dir             : Directory in which to store all output files (default: "\$PWD"/gender_out_dir)
 "
@@ -52,11 +53,9 @@ trap "exit" INT TERM
 trap "kill 0" EXIT
 ## Add kaldi binaries to path if path.sh file exists
 if [ -f path.sh ]; then . ./path.sh; fi
-## Default Options
-feats_flag="n"
-wavs_flag="n"
-nj=16
-overlap=0
+
+## Default config file
+config_file=./config.sh
 
 ## Input Options
 if [ $# -eq 0 ];
@@ -65,7 +64,7 @@ then
     exit
 fi
 
-while getopts ":hw:f:j:o:" option
+while getopts ":hw:f:j:c:" option
 do
     case "${option}"
     in
@@ -74,13 +73,23 @@ do
         f) feats_flag="${OPTARG}";;
         w) wavs_flag="${OPTARG}";;
         j) nj=${OPTARG};;
-        o) overlap=${OPTARG};;
+        c) config_file=${OPTARG};;
         \?) echo "Invalid option: -$OPTARG" >&2 
         printf "See below for usage\n\n"
         echo "$usage"
         exit ;;
     esac
 done
+
+## Import configurations file
+if [ -f $config_file ]; then 
+    . $config_file
+    echo "Using configuration :"
+    cat $config_file
+else
+    echo "No config file found, pls check if default config.sh is present in your working directory"
+fi
+
 ## Input Arguments
 movie_list=${@:$OPTIND:1}
 exp_id=$(($OPTIND+1))
@@ -134,7 +143,7 @@ for movie_path in `cat $movie_list`
 do
     movieName=`basename $movie_path | awk -F '.' '{print $1}'`
     cat $feats_dir/feats.scp | grep -- "${movieName}" > $lists_dir/${movieName}_feats.scp
-    python $py_scripts_dir/generate_vad_labels.py $expt_dir $lists_dir/${movieName}_feats.scp $vad_model $overlap & 
+    python $py_scripts_dir/generate_vad_labels.py $expt_dir $lists_dir/${movieName}_feats.scp $vad_model $vad_overlap & 
     if [ $(($movie_count % $nj)) -eq 0 ];then
         wait
     fi
@@ -156,7 +165,7 @@ do
      compute-mfcc-feats ark:- ark:- 2>>$logfile | \
       spk-seg --bic-alpha=1.1 ark:- $expt_dir/VAD/spk_seg/$movieName.seg 2>>$logfile
     python $py_scripts_dir/spk_seg_to_vad_ts.py $movieName $expt_dir & 
-    python $py_scripts_dir/compute_and_write_vggish_feats.py $proj_dir $wav_file $feats_dir/vggish &
+    python $py_scripts_dir/compute_and_write_vggish_feats.py $proj_dir $wav_file $feats_dir/vggish $gender_overlap &
     if [ $(($movie_count % $nj)) -eq 0 ]; then
         wait
     fi
@@ -166,7 +175,7 @@ wait
 
 ### Make gender predictions
 echo " >>>> PREDICTING GENDER SEGMENTS <<<< "
-python $py_scripts_dir/predict_gender.py $expt_dir $gender_model
+python $py_scripts_dir/predict_gender.py $expt_dir $gender_model $gender_overlap
 
 ## Delete feature files and/or wav files unless otherwise specified
 if [[ "$feats_flag" == "n" ]]; then
