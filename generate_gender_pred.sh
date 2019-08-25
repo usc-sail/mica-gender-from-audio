@@ -15,9 +15,6 @@
 ##
 ##  Variables to be aware of:
 ##      out_dir       : directory where all the output-files will be created
-##      nj            : number of jobs to be run in parallel 
-##      feats_flag    : 'y' if you want to retain feature files after execution
-##      wavs_flag     : 'y' if you want to retain '.wav' audio files after execution
 ##  
 ##  Read the default config file (./config.sh) for more details about user-defined variables
 ##  for inference.
@@ -35,14 +32,11 @@
 
 ## Define usage of script
 usage="Perform gender identification from audio
-Usage: bash $(basename "$0") [-h] [-w y/n] [-f y/n] [-j num_jobs] [-c config_file] movie_paths.txt (out_dir)
-e.g.: bash $(basename "$0") -w y -f y -nj 8 -c config.sh demo.txt DEMO
+Usage: bash $(basename "$0") [-h] [-c config_file] movie_paths.txt (out_dir)
+e.g.: bash $(basename "$0") -c config.sh demo.txt DEMO
 
 where:
 -h                  : Show help 
--w                  : Store wav files after processing (default: n)
--f                  : Store feature files after processing (default: n)
--j                  : Number of parallel jobs to run (default: 16)
 -c                  : Config file (default: ./config.sh)
 movie_paths.txt     : Text file consisting of complete paths to media files (eg, .mp4/.mkv) on each line 
 out_dir             : Directory in which to store all output files (default: "\$PWD"/gender_out_dir)
@@ -64,15 +58,12 @@ then
     exit
 fi
 
-while getopts ":hw:f:j:c:" option
+while getopts ":hc:" option
 do
     case "${option}"
     in
         h) echo "$usage"
         exit;;
-        f) feats_flag="${OPTARG}";;
-        w) wavs_flag="${OPTARG}";;
-        j) nj=${OPTARG};;
         c) config_file=${OPTARG};;
         \?) echo "Invalid option: -$OPTARG" >&2 
         printf "See below for usage\n\n"
@@ -84,10 +75,10 @@ done
 ## Import configurations file
 if [ -f $config_file ]; then 
     . $config_file
-    echo "Using configuration :"
-    cat $config_file
+    echo -e "\nUsing configuration :"
+    paste $config_file | cut -f1 -d' '
 else
-    echo "No config file found, pls check if default config.sh is present in your working directory"
+    echo -e "\nNo config file found, pls check if default config.sh is present in your working directory"
 fi
 
 ## Input Arguments
@@ -111,14 +102,13 @@ gender_model=$proj_dir/models/gender.h5
 wav_dir=$expt_dir/wavs
 feats_dir=$expt_dir/features
 scpfile=$feats_dir/wav.scp
-logfile=$feats_dir/speaker_segmentation.log
 lists_dir=$feats_dir/scp_lists
 py_scripts_dir=$proj_dir/python_scripts
 if [ -d "$wav_dir" ]; then rm -rf $wav_dir;fi
-mkdir -p $wav_dir $feats_dir/log $lists_dir $expt_dir/VAD/{spk_seg,timestamps,posteriors} $expt_dir/GENDER/{timestamps,posteriors} 
+mkdir -p $wav_dir $feats_dir/log $lists_dir $expt_dir/VAD/{timestamps,posteriors} $expt_dir/GENDER/{timestamps,posteriors} 
 
 ### Create .wav files given movie_files
-echo " >>>> CREATING WAV FILES <<<< "
+echo -e "\n >>>> CREATING WAV FILES <<<< "
 bash_scripts/create_wav_files.sh $movie_list $wav_dir $nj
 num_movies=`cat ${movie_list} | wc -l`
 num_wav_extracted=`ls ${wav_dir} | wc -l`
@@ -143,7 +133,7 @@ for movie_path in `cat $movie_list`
 do
     movieName=`basename $movie_path | awk -F '.' '{print $1}'`
     cat $feats_dir/feats.scp | grep -- "${movieName}" > $lists_dir/${movieName}_feats.scp
-    python $py_scripts_dir/generate_vad_labels.py $expt_dir $lists_dir/${movieName}_feats.scp $vad_model $vad_overlap & 
+    python $py_scripts_dir/generate_vad_labels.py $expt_dir $lists_dir/${movieName}_feats.scp $vad_model $vad_overlap $uniform_seg_len & 
     if [ $(($movie_count % $nj)) -eq 0 ];then
         wait
     fi
@@ -152,7 +142,7 @@ done
 wait
 
 ### Create VGGish embeddings
-echo " >>>> SPEAKER SEGMENTATION / GENERATE VGGISH EMBEDDINGS <<<< "
+echo " >>>> EXTRACTING VGGISH EMBEDDINGS <<<< "
 ## Download vggish_model.ckpt file if not exists in python_scripts/audioset_scripts/ directory
 python $py_scripts_dir/download_vggish_ckpt_file.py python_scripts/audioset_scripts/vggish_model.ckpt
 
@@ -161,10 +151,6 @@ movie_count=1
 for wav_file in `cat $expt_dir/wav.list`
 do
     movieName=`basename $wav_file .wav`
-    extract-segments scp:$scpfile $expt_dir/VAD/timestamps/${movieName}_wo_ss.ts ark:- 2>>$logfile | \
-     compute-mfcc-feats ark:- ark:- 2>>$logfile | \
-      spk-seg --bic-alpha=1.1 ark:- $expt_dir/VAD/spk_seg/$movieName.seg 2>>$logfile
-    python $py_scripts_dir/spk_seg_to_vad_ts.py $movieName $expt_dir & 
     python $py_scripts_dir/extract_vggish_feats.py $proj_dir $wav_file $feats_dir/vggish $gender_overlap &
     if [ $(($movie_count % $nj)) -eq 0 ]; then
         wait
