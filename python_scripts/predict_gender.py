@@ -5,7 +5,7 @@ Predict frame-level gender of an audio segment (agnostic of speech) using
 vggish-embeddings extracted for segments of length 0.96s
      
 Input
-    1) expt_dir   : parent directory which contains 'features' and 'VAD' directories
+    1) expt_dir   : parent directory which contains 'features' and 'SAD' directories
     2) model_file : pre-trained Keras (TF backend) model to predict gender for a
                     segment
     3) overlap    : fraction overlap of segments during inference of gender ID labels
@@ -89,7 +89,7 @@ def main():
     effective_seg_len = (1-overlap)*gender_seg_len
     gender = {'0':'M','1':'F'}
     
-    vad_ts_dir = os.path.join(expt_dir, 'VAD/timestamps/')
+    sad_ts_dir = os.path.join(expt_dir, 'SAD/timestamps/')
     write_post = os.path.join(expt_dir, 'GENDER/posteriors/')
     write_ts   = os.path.join(expt_dir, 'GENDER/timestamps/')
     feats_path = os.path.join(expt_dir, 'features/vggish/')
@@ -128,14 +128,14 @@ def main():
                     for label in pred_frame_level:
                         post_fp.write('{0:0.2f}\n'.format(label))
                 
-                vad_data = [x.rstrip().split() for x in open(os.path.join(vad_ts_dir, movie + '_subsegments.ts'), 'r').readlines()]
-                vad_times = [[float(x[-2]), float(x[-1])] for x in vad_data]
+                sad_data = [x.rstrip().split() for x in open(os.path.join(sad_ts_dir, movie + '_subsegments.ts'), 'r').readlines()]
+                sad_times = [[float(x[-2]), float(x[-1])] for x in sad_data]
                 gender_labels = np.round(pred_frame_level)
                 
                 fts = open(os.path.join(write_ts, movie + '.ts'),'w')
 
                 seg_data = []
-                for seg in vad_times:
+                for seg in sad_times:
                     start = int(seg[0]*100)
                     end = int(seg[1]*100)
                     if start>=end or end > len(gender_labels):
