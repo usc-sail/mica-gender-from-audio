@@ -61,6 +61,25 @@ def feature_parser(example):
     
     return context_parsed['movie_id'], shaped_feature
 
+def resegment(segments):
+    data = {'male': [x for x in segments if x[-1] == 'M'], \
+           'female': [x for x in segments if x[-1] == 'F']}
+    
+    seg_data = []
+    for gender in ['male', 'female']:
+        idx=0
+        while idx < len(data[gender]):
+            start = data[gender][idx][0]
+            end = data[gender][idx][1]
+            if idx != len(data[gender])-1:
+                while data[gender][idx+1][0] == data[gender][idx][1]:
+                    idx += 1
+                    end = data[gender][idx][1]
+                    if idx == len(data[gender])-1: break
+            seg_data.append([start, end, gender])        
+            idx += 1 
+    
+    return sorted(seg_data)
 
 def main():
     expt_dir = sys.argv[1]
@@ -105,25 +124,28 @@ def main():
                 pred_frame_level[seg_end:] = pred_out[-1][-1]
                     
                 
-                fpost = open(os.path.join(write_post, movie + '.post'),'w')
-                for label in pred_frame_level:
-                    fpost.write('{0:0.2f}\n'.format(label))
-                fpost.close()
+                with open(os.path.join(write_post, movie + '.post'),'w') as post_fp:
+                    for label in pred_frame_level:
+                        post_fp.write('{0:0.2f}\n'.format(label))
                 
-                vad_data = [x.rstrip().split() for x in open(os.path.join(vad_ts_dir, movie + '.ts'), 'r').readlines()]
-                vad_times = [[float(x[0]), float(x[1])] for x in vad_data]
+                vad_data = [x.rstrip().split() for x in open(os.path.join(vad_ts_dir, movie + '_subsegments.ts'), 'r').readlines()]
+                vad_times = [[float(x[-2]), float(x[-1])] for x in vad_data]
                 gender_labels = np.round(pred_frame_level)
                 
                 fts = open(os.path.join(write_ts, movie + '.ts'),'w')
 
+                seg_data = []
                 for seg in vad_times:
                     start = int(seg[0]*100)
                     end = int(seg[1]*100)
                     if start>=end or end > len(gender_labels):
                         continue
-                    gender_seg = int(np.median(gender_labels[start:end]))
-                    fts.write('{}\t{}\t{}\n'.format(seg[0], seg[1], gender[str(gender_seg)]))
-                fts.close()
+                    gender_label_seg = int(np.median(gender_labels[start:end]))
+                    seg_data.append([seg[0], seg[1], gender[str(gender_label_seg)]])
+
+                resegmented_ts_data = resegment(seg_data)
+                with open(os.path.join(write_ts, movie + '.ts'), 'w') as ts_fp:
+                    ts_fp.write('\n'.join([' '.join([str(x) for x in seg]) for seg in resegmented_ts_data]))
             except tf.errors.OutOfRangeError:
                 break
 
