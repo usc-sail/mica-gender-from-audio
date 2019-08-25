@@ -4,7 +4,7 @@
 ##
 ##
 ##
-##  Generate gender and VAD timestamps based on models trained on keras. 
+##  Generate gender and SAD timestamps based on models trained on keras. 
 ##  Input must be a text file containing full paths to either mp4/mkv files or wav 
 ##  files, and optionally the path to the directory where all the output will be 
 ##  stored (default=$proj_dir/gender_out_dir)
@@ -23,7 +23,7 @@
 ##     kaldi          : ensure that all kaldi binaries are added to system path. If not,
 ##                      either add them to system path, or modify kaldi_root in 1st line of
 ##                      'path.sh' to reflect kaldi installation directory.
-##     keras, tensorflow              :     required to load model and make VAD predictions.
+##     keras, tensorflow              :     required to load model and make SAD predictions.
 ##     re, gzip, struct               :     used by kaldi_io, to read feature files.
 ##     Other python libraries required include numpy, scipy, resampy.
 ##
@@ -97,7 +97,7 @@ if [ $num_movies -lt $nj ]; then
 fi
 
 proj_dir=$PWD
-vad_model=$proj_dir/models/vad.h5
+sad_model=$proj_dir/models/sad.h5
 gender_model=$proj_dir/models/gender.h5
 wav_dir=$expt_dir/wavs
 feats_dir=$expt_dir/features
@@ -105,7 +105,7 @@ scpfile=$feats_dir/wav.scp
 lists_dir=$feats_dir/scp_lists
 py_scripts_dir=$proj_dir/python_scripts
 if [ -d "$wav_dir" ]; then rm -rf $wav_dir;fi
-mkdir -p $wav_dir $feats_dir/log $lists_dir $expt_dir/VAD/{timestamps,posteriors} $expt_dir/GENDER/{timestamps,posteriors} 
+mkdir -p $wav_dir $feats_dir/log $lists_dir $expt_dir/SAD/{timestamps,posteriors} $expt_dir/GENDER/{timestamps,posteriors} 
 
 ### Create .wav files given movie_files
 echo -e "\n >>>> CREATING WAV FILES <<<< "
@@ -118,7 +118,7 @@ if [ $num_movies -ne $num_wav_extracted ]; then
 fi
 
 ### Extract fbank-features
-echo " >>>> EXTRACTING FEATURES FOR VAD <<<< "
+echo " >>>> EXTRACTING FEATURES FOR SAD <<<< "
 bash_scripts/create_logmel_feats.sh $wav_dir $feats_dir $nj
 num_feats=`cat ${feats_dir}/feats.scp | wc -l`
 if [ $num_movies -ne $num_feats ]; then
@@ -126,14 +126,14 @@ if [ $num_movies -ne $num_feats ]; then
     exit 1
 fi
 
-## Generate VAD Labels
-echo " >>>> GENERATING VAD LABELS <<<< "
+## Generate SAD Labels
+echo " >>>> GENERATING SAD LABELS <<<< "
 movie_count=1
 for movie_path in `cat $movie_list`
 do
     movieName=`basename $movie_path | awk -F '.' '{print $1}'`
     cat $feats_dir/feats.scp | grep -- "${movieName}" > $lists_dir/${movieName}_feats.scp
-    python $py_scripts_dir/generate_vad_labels.py $expt_dir $lists_dir/${movieName}_feats.scp $vad_model $vad_overlap $uniform_seg_len & 
+    python $py_scripts_dir/generate_sad_labels.py $expt_dir $lists_dir/${movieName}_feats.scp $sad_model $sad_overlap $uniform_seg_len & 
     if [ $(($movie_count % $nj)) -eq 0 ];then
         wait
     fi
