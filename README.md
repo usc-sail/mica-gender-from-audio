@@ -36,5 +36,5 @@ This tool can be used for noise-robust gender identification from audio. Two par
 1. Speech Activity Detection (SAD), and  
 2. Gender Identification (GID) of speech segments.  
 
-Both of the DNN-based systems make predictions at segment-level as opposed to traditional frame-level analysis. Segment duration for the SAD system is 0.64s (design choice) and for the GID system is 0.96s (pre-trained [*VGGish*](https://github.com/tensorflow/models/tree/master/research/audioset/vggish) embeddings). For more details about the architecture and training procedures, please refer to the ICASSP '19 [paper](https://ieeexplore.ieee.org/document/8682532) (SAD), and INTERSPEECH '18 [paper](https://ieeexplore.ieee.org/abstract/document/8682532) (GID).
+Both of the DNN-based systems make predictions at segment-level as opposed to traditional frame-level analysis. Segment duration for the SAD system is 0.64s (design choice) and for the GID system is 0.96s (pre-trained [*VGGish*](https://github.com/tensorflow/models/tree/master/research/audioset/vggish) embeddings). For more details about the architecture and training procedures, please refer to the [ICASSP '19 paper](https://ieeexplore.ieee.org/document/8682532) (SAD), and [INTERSPEECH '18 paper](https://ieeexplore.ieee.org/abstract/document/8682532) (GID).
 
