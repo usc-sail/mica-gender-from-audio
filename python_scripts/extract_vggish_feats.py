@@ -38,13 +38,18 @@ os.environ["CUDA_VISIBLE_DEVICES"]=""
 os.environ['TF_CPP_MIN_LOG_LEVEL']='3'
 import tensorflow as tf
 from scipy.io import wavfile
+import argparse
 
 config=tf.ConfigProto(intra_op_parallelism_threads=8, inter_op_parallelism_threads=8)
 
-proj_dir, wav_file, write_dir = sys.argv[1:-1]
-overlap = float(sys.argv[-1])
+parser = argparse.ArgumentParser(description='Extract 128D VGGish features')
+parser.add_argument('-o','--overlap', type=float, metavar='overlap', help='fraction overlap of segments during inference of gender ID labels')
+parser.add_argument('proj_dir', type=str, help='project directory where main script is executed')
+parser.add_argument('wav_file', type=str, help='path to single audio file')
+parser.add_argument('write_dir', type=str, help=' directory in which output files are stored')
+args = parser.parse_args()
 
-AS_dir = os.path.join(proj_dir,'python_scripts/audioset_scripts/')
+AS_dir = os.path.join(args.proj_dir,'python_scripts/audioset_scripts/')
 pca_params = os.path.join(AS_dir,'vggish_pca_params.npz')
 checkpoint= os.path.join(AS_dir,'vggish_model.ckpt')
 sys.path.insert(0,AS_dir)
@@ -60,7 +65,7 @@ def main(_):
   # the model. If none is provided, we generate a synthetic input.
   # Prepare a postprocessor to munge the model embeddings.
   pproc = vggish_postprocess.Postprocessor(pca_params)
-  vggish_params.EXAMPLE_HOP_SECONDS = (1-overlap)*vggish_params.EXAMPLE_WINDOW_SECONDS
+  vggish_params.EXAMPLE_HOP_SECONDS = (1-args.overlap)*vggish_params.EXAMPLE_WINDOW_SECONDS
 
   # If needed, prepare a record writer_dict to store the postprocessed embeddings.
 
@@ -72,9 +77,9 @@ def main(_):
     embedding_tensor = sess.graph.get_tensor_by_name(
         vggish_params.OUTPUT_TENSOR_NAME)
 
-    movie_id = wav_file[wav_file.rfind('/')+1:wav_file.rfind('.')]
+    movie_id = args.wav_file[args.wav_file.rfind('/')+1:args.wav_file.rfind('.')]
 
-    examples_batch = vggish_input.wavfile_to_examples(wav_file)
+    examples_batch = vggish_input.wavfile_to_examples(args.wav_file)
     num_splits = min(int(examples_batch.shape[0]/10), 100)
     num_splits = max(1, num_splits)
     examples_batch = np.array_split(examples_batch, num_splits)
@@ -115,11 +120,11 @@ def main(_):
             }
         )
     )
-    writer = tf.python_io.TFRecordWriter(os.path.join(write_dir, movie_id + '.tfrecord'))
+    writer = tf.python_io.TFRecordWriter(os.path.join(args.write_dir, movie_id + '.tfrecord'))
     writer.write(seq_example.SerializeToString())
     writer.close()
 
 if __name__ == '__main__':
-  if not os.path.exists(write_dir):
-    os.makedirs(write_dir)
+  if not os.path.exists(args.write_dir):
+    os.makedirs(args.write_dir)
   tf.app.run()

@@ -5,9 +5,8 @@ Predict frame-level gender of an audio segment (agnostic of speech) using
 vggish-embeddings extracted for segments of length 0.96s
      
 Input
-    1) expt_dir   : parent directory which contains 'features' and 'SAD' directories
-    2) model_file : pre-trained Keras (TF backend) model to predict gender for a
-                    segment
+    1) expt_dir   : Directory in which to write all output files
+    2) model_file : pre-trained Keras (TF backend) model to predict gender 
     3) overlap    : fraction overlap of segments during inference of gender ID labels
 
 Output
@@ -42,9 +41,7 @@ import keras.backend as K
 config=tf.ConfigProto(intra_op_parallelism_threads=16, inter_op_parallelism_threads=16)
 import warnings
 warnings.filterwarnings("ignore")
-#from train_gender import FullyConnected
-#config = tf.ConfigProto()
-#config.gpu_options.per_process_gpu_memory_fraction = 0.2
+import argparse
 
 def feature_parser(example):
     context_features = {'movie_id': tf.FixedLenFeature([], tf.string)}
@@ -82,17 +79,20 @@ def resegment(segments):
     return sorted(seg_data)
 
 def main():
-    expt_dir = sys.argv[1]
-    overlap = float(sys.argv[-1])
-    fps = 100       # Used to project overlapped segment-level decisions to frame-level 
+    parser = argparse.ArgumentParser(description='Predict frame-level gender of an audio segment')
+    parser.add_argument('-o', '--overlap', type=float, metavar='overlap', help='fraction overlap of segments during inference of gender ID labels')
+    parser.add_argument('expt_dir', type=str, help='Directory in which to write all output files')
+    parser.add_argument('model_file', type=str, help='pre-trained Keras (TF backend) model to predict gender')
+    args = parser.parse_args()
+    
     gender_seg_len = 0.96   # Feature segment length for gender ID
-    effective_seg_len = (1-overlap)*gender_seg_len
+    effective_seg_len = (1-args.overlap)*gender_seg_len
     gender = {'0':'M','1':'F'}
     
-    sad_ts_dir = os.path.join(expt_dir, 'SAD/timestamps/')
-    write_post = os.path.join(expt_dir, 'GENDER/posteriors/')
-    write_ts   = os.path.join(expt_dir, 'GENDER/timestamps/')
-    feats_path = os.path.join(expt_dir, 'features/vggish/')
+    sad_ts_dir = os.path.join(args.expt_dir, 'SAD/timestamps/')
+    write_post = os.path.join(args.expt_dir, 'GENDER/posteriors/')
+    write_ts   = os.path.join(args.expt_dir, 'GENDER/timestamps/')
+    feats_path = os.path.join(args.expt_dir, 'features/vggish/')
     
     if not os.path.exists(write_post):  os.makedirs(write_post)
     if not os.path.exists(write_ts): os.makedirs(write_ts)
@@ -106,13 +106,13 @@ def main():
         tf_key, tf_fts = dataset_itr.get_next()
 
         K.tensorflow_backend.set_session(sess)
-        model = load_model(sys.argv[2])
+        model = load_model(args.model_file)
         
         while 1:
             try:
                 [movie, feats] = sess.run([tf_key, tf_fts])
                 pred_out = model.predict(feats)
-                total_len = feats.shape[0] * effective_seg_len + overlap * gender_seg_len
+                total_len = feats.shape[0] * effective_seg_len + args.overlap * gender_seg_len
                 pred_frame_level = np.zeros(int(100*total_len))
                 
                 ## Assign labels to overlapped segments at frame level (100fps)

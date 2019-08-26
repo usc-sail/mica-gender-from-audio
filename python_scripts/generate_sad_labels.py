@@ -6,8 +6,9 @@ Generate SAD labels using log-Mel features extracted for 0.64s segments as input
 Input
     1) expt_dir     :  Directory in which to write all output files
     2) feats_scp    :  Kaldi feature file in .scp format
-    3) model_file   :  SAD model file trained on keras
+    3) model_file   :  SAD model file trained with keras
     4) overlap      :  fraction overlap of segments during SAD post-processing
+    5) unif_seg     :  Segment duration for uniform segmentation of speech segments
 
 Output
     1) timestamps-file   :  '.ts' ext file for each input file consisting of
@@ -34,10 +35,10 @@ sys.stderr = open(os.devnull, 'w')
 import keras
 sys.stderr = stderr
 from keras.models import load_model
-from scipy import signal as sig
 from kaldi_io import read_mat_scp as rms
 from keras import backend as K
 import warnings
+import argparse
 #warnings.filterwarnings("ignore")
 
 
@@ -94,19 +95,24 @@ def perform_uniform_segmentation(movie, segments, write_dir, max_segment_duratio
 
 
 def main():
-    expt_dir, feats_scp, model_file = sys.argv[1:-2]
-    overlap = float(sys.argv[-2])
-    uniform_seg_len = float(sys.argv[-1])
-    assert overlap >=0 and overlap <1, "Invalid choice of overlap, should be 0 <= overlap < 1"
-    num_frames, num_freq_bins = (64, 64)
-    fps = 100
-    K.set_session(K.tf.Session(config=K.tf.ConfigProto(intra_op_parallelism_threads=8, inter_op_parallelism_threads=8)))
-    shift = num_frames - int(overlap*num_frames)
-    write_post = os.path.join(expt_dir, 'SAD/posteriors/')
-    write_ts   = os.path.join(expt_dir, 'SAD/timestamps/')
+    parser = argparse.ArgumentParser(description=' Generate SAD labels using log-Mel features extracted for 0.64s segments as input')
+    parser.add_argument('-o', '--overlap', type=float, metavar='overlap', help='fraction overlap of segments during SAD post-processing')
+    parser.add_argument('--unif_seg', type=float, help='Segment duration for uniform segmentation of speech segments')
+    parser.add_argument('expt_dir', type=str, help='Directory in which to write all output files')
+    parser.add_argument('feats_scp', type=str, help='Kaldi feature file in .scp format')
+    parser.add_argument('model_file', type=str, help='SAD model file trained with keras')
+    
+    args = parser.parse_args()
 
-    model = load_model(model_file)
-    gen = rms(feats_scp)
+    assert args.overlap >=0 and args.overlap <1, "Invalid choice of overlap, should be 0 <= overlap < 1"
+    num_frames, num_freq_bins = (64, 64)
+    K.set_session(K.tf.Session(config=K.tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1)))
+    shift = num_frames - int(args.overlap*num_frames)
+    write_post = os.path.join(args.expt_dir, 'SAD/posteriors/')
+    write_ts   = os.path.join(args.expt_dir, 'SAD/timestamps/')
+
+    model = load_model(args.model_file)
+    gen = rms(args.feats_scp)
 
     # Generate SAD posteriors using pre-trained SAD model
     for movie, fts in gen:
@@ -123,7 +129,7 @@ def main():
         # Post-processing of posteriors
         labels = np.round(predictions)
         seg_times = frame2seg(np.round(labels))
-        perform_uniform_segmentation(movie, seg_times, write_ts, max_segment_duration=uniform_seg_len, min_remaining_duration=0.64)
+        perform_uniform_segmentation(movie, seg_times, write_ts, max_segment_duration=args.unif_seg, min_remaining_duration=0.64)
 
         # Write start and end SAD timestamps 
         with open(os.path.join(write_ts, movie + '.ts'),'w') as ts_fp:

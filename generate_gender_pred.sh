@@ -133,7 +133,7 @@ for movie_path in `cat $movie_list`
 do
     movieName=`basename $movie_path | awk -F '.' '{print $1}'`
     cat $feats_dir/feats.scp | grep -- "${movieName}" > $lists_dir/${movieName}_feats.scp
-    python $py_scripts_dir/generate_sad_labels.py $expt_dir $lists_dir/${movieName}_feats.scp $sad_model $sad_overlap $uniform_seg_len & 
+    python $py_scripts_dir/generate_sad_labels.py -o $sad_overlap --unif_seg $uniform_seg_len $expt_dir $lists_dir/${movieName}_feats.scp $sad_model & 
     if [ $(($movie_count % $nj)) -eq 0 ];then
         wait
     fi
@@ -151,7 +151,7 @@ movie_count=1
 for wav_file in `cat $expt_dir/wav.list`
 do
     movieName=`basename $wav_file .wav`
-    python $py_scripts_dir/extract_vggish_feats.py $proj_dir $wav_file $feats_dir/vggish $gender_overlap &
+    python $py_scripts_dir/extract_vggish_feats.py -o $gender_overlap $proj_dir $wav_file $feats_dir/vggish &
     if [ $(($movie_count % $nj)) -eq 0 ]; then
         wait
     fi
@@ -161,7 +161,7 @@ wait
 
 ### Make gender predictions
 echo " >>>> PREDICTING GENDER SEGMENTS <<<< "
-python $py_scripts_dir/predict_gender.py $expt_dir $gender_model $gender_overlap
+python $py_scripts_dir/predict_gender.py -o $gender_overlap $expt_dir $gender_model
 
 ## Delete feature files and/or wav files unless otherwise specified
 if [[ "$feats_flag" == "n" ]]; then
