@@ -30,6 +30,14 @@ Frame level posteriors are also saved in the output directory.
                                      'path.sh' to reflect kaldi installation directory.
     keras, tensorflow        :   required to load data, model and make VAD predictions.
     Other python libraries required include numpy, scipy, resampy.
+    h5py==2.7.1
+    Keras==2.1.5
+    numpy==1.14.2
+    requests==2.18.4
+    resampy==0.2.0
+    scipy==1.0.0
+    six==1.12.0
+    tensorflow==1.4.1
 
 
 This tool can be used for noise-robust gender identification from audio. Two parallel systems are implemented for this purpose: 
@@ -37,4 +45,5 @@ This tool can be used for noise-robust gender identification from audio. Two par
 2. Gender Identification (GID) of speech segments.  
 
 Both of the DNN-based systems make predictions at segment-level as opposed to traditional frame-level analysis. Segment duration for the SAD system is 0.64s (design choice) and for the GID system is 0.96s (pre-trained [*VGGish*](https://github.com/tensorflow/models/tree/master/research/audioset/vggish) embeddings). For more details about the architecture and training procedures, please refer to the [ICASSP '19 paper](https://ieeexplore.ieee.org/document/8682532) (SAD), and [INTERSPEECH '18 paper](https://ieeexplore.ieee.org/abstract/document/8682532) (GID).
+
 
