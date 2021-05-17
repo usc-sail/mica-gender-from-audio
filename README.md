@@ -23,7 +23,7 @@ Frame level posteriors are also saved in the output directory.
     sad_overlap=0       # % overlap in SAD-segments (range: 0-1, 0 for no overlap) (single segment is 0.64s)
     gender_overlap=0    # % overlap in GENDER-segments (single segment is 0.96s) 
     uniform_seg_len=2.0   # Segment length for uniform speaker-segmentation 
-
+    only_vad=0          # 1 if only sad outputs required
 ##  Dependencies :
     kaldi                    :   ensure that all kaldi binaries are added to system path. If not,
                                      either add them to system path, or modify kaldi_root in 1st line of
@@ -38,7 +38,7 @@ Frame level posteriors are also saved in the output directory.
     scipy==1.0.0
     six==1.12.0
     tensorflow==1.4.1
-
+   
 
 This tool can be used for noise-robust gender identification from audio. Two parallel systems are implemented for this purpose: 
 1. Speech Activity Detection (SAD), and  
