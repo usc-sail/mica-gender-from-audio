@@ -98,13 +98,14 @@ fi
 
 proj_dir=$PWD
 sad_model=$proj_dir/models/sad.h5
+#sad_model=/proj/rajatheb/VAD/speech_enhancement/scripts/train_scripts/git/mica-speech-activity-detection/models/cnn_td.h5
 gender_model=$proj_dir/models/gender.h5
 wav_dir=$expt_dir/wavs
 feats_dir=$expt_dir/features
 scpfile=$feats_dir/wav.scp
 lists_dir=$feats_dir/scp_lists
 py_scripts_dir=$proj_dir/python_scripts
-if [ -d "$wav_dir" ]; then rm -rf $wav_dir;fi
+#if [ -d "$wav_dir" ]; then rm -rf $wav_dir;fi
 mkdir -p $wav_dir $feats_dir/log $lists_dir $expt_dir/SAD/{timestamps,posteriors} $expt_dir/GENDER/{timestamps,posteriors} 
 
 ### Create .wav files given movie_files
@@ -114,7 +115,7 @@ num_movies=`cat ${movie_list} | wc -l`
 num_wav_extracted=`ls ${wav_dir} | wc -l`
 if [ $num_movies -ne $num_wav_extracted ]; then
     echo "Unable to extract all .wav files, exiting..."
-    exit 1
+#    exit 1
 fi
 
 ### Extract fbank-features
@@ -123,7 +124,7 @@ bash_scripts/create_logmel_feats.sh $wav_dir $feats_dir $nj
 num_feats=`cat ${feats_dir}/feats.scp | wc -l`
 if [ $num_movies -ne $num_feats ]; then
     echo "Unable to extract all feature files, exiting..."
-    exit 1
+#    exit 1
 fi
 
 ## Generate SAD Labels
@@ -132,7 +133,11 @@ movie_count=1
 for movie_path in `cat $movie_list`
 do
     movieName=`basename $movie_path | awk -F '.' '{print $1}'`
+ #   printf "$movieName\n"
     cat $feats_dir/feats.scp | grep -- "${movieName}" > $lists_dir/${movieName}_feats.scp
+    if [ -f $expt_dir/SAD/posteriors/${movieName}.post ];then
+        continue
+    fi
     python $py_scripts_dir/generate_sad_labels.py -o $sad_overlap --unif_seg $uniform_seg_len $expt_dir $lists_dir/${movieName}_feats.scp $sad_model & 
     if [ $(($movie_count % $nj)) -eq 0 ];then
         wait
@@ -141,27 +146,33 @@ do
 done
 wait
 
+if [[ $only_vad -eq 1 ]]; then
+    exit 1
+fi
+
 ### Create VGGish embeddings
 echo " >>>> EXTRACTING VGGISH EMBEDDINGS <<<< "
 ## Download vggish_model.ckpt file if not exists in python_scripts/audioset_scripts/ directory
 python $py_scripts_dir/download_vggish_ckpt_file.py python_scripts/audioset_scripts/vggish_model.ckpt
-
+    
 ls $wav_dir/*.wav  > $expt_dir/wav.list
-movie_count=1
-for wav_file in `cat $expt_dir/wav.list`
-do
-    movieName=`basename $wav_file .wav`
-    python $py_scripts_dir/extract_vggish_feats.py -o $gender_overlap $proj_dir $wav_file $feats_dir/vggish &
-    if [ $(($movie_count % $nj)) -eq 0 ]; then
-        wait
-    fi
-    movie_count=`expr $movie_count + 1`
-done
-wait
+python $py_scripts_dir/extract_vggish_feats.py -o $gender_overlap $proj_dir $expt_dir/wav.list $feats_dir/vggish $nj 
+
+#movie_count=1
+#for wav_file in `cat $expt_dir/wav.list`
+#do
+#    movieName=`basename $wav_file .wav`
+#    python $py_scripts_dir/extract_vggish_feats.py -o $gender_overlap $proj_dir $wav_file $feats_dir/vggish &
+#    if [ $(($movie_count % $nj)) -eq 0 ]; then
+#        wait
+#    fi
+#    movie_count=`expr $movie_count + 1`
+#done
+#wait
 
 ### Make gender predictions
 echo " >>>> PREDICTING GENDER SEGMENTS <<<< "
-python $py_scripts_dir/predict_gender.py -o $gender_overlap $expt_dir $gender_model
+python $py_scripts_dir/predict_gender.py -o $gender_overlap $expt_dir $gender_model $nj
 
 ## Delete feature files and/or wav files unless otherwise specified
 if [[ "$feats_flag" == "n" ]]; then

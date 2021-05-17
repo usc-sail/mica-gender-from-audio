@@ -38,7 +38,6 @@ sys.stderr = stderr
 import tensorflow as tf
 from keras.models import load_model
 import keras.backend as K
-config=tf.ConfigProto(intra_op_parallelism_threads=16, inter_op_parallelism_threads=16)
 import warnings
 warnings.filterwarnings("ignore")
 import argparse
@@ -83,8 +82,10 @@ def main():
     parser.add_argument('-o', '--overlap', type=float, metavar='overlap', help='fraction overlap of segments during inference of gender ID labels')
     parser.add_argument('expt_dir', type=str, help='Directory in which to write all output files')
     parser.add_argument('model_file', type=str, help='pre-trained Keras (TF backend) model to predict gender')
+    parser.add_argument('nj', type=int, help='number of parallel threads')
     args = parser.parse_args()
     
+    config=tf.ConfigProto(intra_op_parallelism_threads=args.nj, inter_op_parallelism_threads=args.nj)
     gender_seg_len = 0.96   # Feature segment length for gender ID
     effective_seg_len = (1-args.overlap)*gender_seg_len
     gender = {'0':'M','1':'F'}

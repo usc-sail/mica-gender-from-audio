@@ -40,15 +40,16 @@ import tensorflow as tf
 from scipy.io import wavfile
 import argparse
 
-config=tf.ConfigProto(intra_op_parallelism_threads=8, inter_op_parallelism_threads=8)
 
 parser = argparse.ArgumentParser(description='Extract 128D VGGish features')
 parser.add_argument('-o','--overlap', type=float, metavar='overlap', help='fraction overlap of segments during inference of gender ID labels')
 parser.add_argument('proj_dir', type=str, help='project directory where main script is executed')
 parser.add_argument('wav_file', type=str, help='path to single audio file')
 parser.add_argument('write_dir', type=str, help=' directory in which output files are stored')
+parser.add_argument('nj', type=int, help='Number of parallel threads')
 args = parser.parse_args()
 
+config=tf.ConfigProto(intra_op_parallelism_threads=args.nj, inter_op_parallelism_threads=args.nj)
 AS_dir = os.path.join(args.proj_dir,'python_scripts/audioset_scripts/')
 pca_params = os.path.join(AS_dir,'vggish_pca_params.npz')
 checkpoint= os.path.join(AS_dir,'vggish_model.ckpt')
@@ -76,53 +77,58 @@ def main(_):
         vggish_params.INPUT_TENSOR_NAME)
     embedding_tensor = sess.graph.get_tensor_by_name(
         vggish_params.OUTPUT_TENSOR_NAME)
+    movie_files = [x.rstrip() for x in open(args.wav_file, 'r').readlines()] 
 
-    movie_id = args.wav_file[args.wav_file.rfind('/')+1:args.wav_file.rfind('.')]
+    for movie_file in movie_files:
+        movie_id = movie_file[movie_file.rfind('/')+1:movie_file.rfind('.')]
+        write_file = os.path.join(args.write_dir, movie_id + '.tfrecord') 
+        if os.path.exists(write_file):
+            continue
 
-    examples_batch = vggish_input.wavfile_to_examples(args.wav_file)
-    num_splits = min(int(examples_batch.shape[0]/10), 100)
-    num_splits = max(1, num_splits)
-    examples_batch = np.array_split(examples_batch, num_splits)
+        examples_batch = vggish_input.wavfile_to_examples(movie_file)
+        num_splits = min(int(examples_batch.shape[0]/10), 100)
+        num_splits = max(1, num_splits)
+        examples_batch = np.array_split(examples_batch, num_splits)
 
-    embedding_batch = []
-    for i in range(num_splits):
-        [batch] = sess.run([embedding_tensor],
-                                 feed_dict={features_tensor: examples_batch[i]})
-        embedding_batch.extend(batch)
+        embedding_batch = []
+        for i in range(num_splits):
+            [batch] = sess.run([embedding_tensor],
+                                     feed_dict={features_tensor: examples_batch[i]})
+            embedding_batch.extend(batch)
 
-    postprocessed_batch = pproc.postprocess(np.array(embedding_batch))
+        postprocessed_batch = pproc.postprocess(np.array(embedding_batch))
 
-    # Write the postprocessed embeddings as a SequenceExample, in a similar
-    # format as the features released in AudioSet. Each row of the batch of
-    # embeddings corresponds to roughly a second of audio (96 10ms frames), and
-    # the rows are written as a sequence of bytes-valued features, where each
-    # feature value contains the 128 bytes of the whitened quantized embedding.
-    seq_example = tf.train.SequenceExample(
-        context=tf.train.Features(
-            feature={
-                'movie_id':
-                    tf.train.Feature(
-                        bytes_list=tf.train.BytesList(
-                            value=[movie_id]))
-                    }
-        ),
-        feature_lists=tf.train.FeatureLists(
-            feature_list={
-                vggish_params.AUDIO_EMBEDDING_FEATURE_NAME:
-                    tf.train.FeatureList(
-                        feature=[
-                            tf.train.Feature(
-                                bytes_list=tf.train.BytesList(
-                                    value=[embedding.tobytes()]))
-                            for embedding in postprocessed_batch
-                        ]
-                    )
-            }
+        # Write the postprocessed embeddings as a SequenceExample, in a similar
+        # format as the features released in AudioSet. Each row of the batch of
+        # embeddings corresponds to roughly a second of audio (96 10ms frames), and
+        # the rows are written as a sequence of bytes-valued features, where each
+        # feature value contains the 128 bytes of the whitened quantized embedding.
+        seq_example = tf.train.SequenceExample(
+            context=tf.train.Features(
+                feature={
+                    'movie_id':
+                        tf.train.Feature(
+                            bytes_list=tf.train.BytesList(
+                                value=[movie_id]))
+                        }
+            ),
+            feature_lists=tf.train.FeatureLists(
+                feature_list={
+                    vggish_params.AUDIO_EMBEDDING_FEATURE_NAME:
+                        tf.train.FeatureList(
+                            feature=[
+                                tf.train.Feature(
+                                    bytes_list=tf.train.BytesList(
+                                        value=[embedding.tobytes()]))
+                                for embedding in postprocessed_batch
+                            ]
+                        )
+                }
+            )
         )
-    )
-    writer = tf.python_io.TFRecordWriter(os.path.join(args.write_dir, movie_id + '.tfrecord'))
-    writer.write(seq_example.SerializeToString())
-    writer.close()
+        writer = tf.python_io.TFRecordWriter(write_file)
+        writer.write(seq_example.SerializeToString())
+        writer.close()
 
 if __name__ == '__main__':
   if not os.path.exists(args.write_dir):
