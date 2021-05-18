@@ -112,6 +112,8 @@ def main():
         while 1:
             try:
                 [movie, feats] = sess.run([tf_key, tf_fts])
+                if isinstance(movie, bytes):
+                    movie = movie.decode()
                 pred_out = model.predict(feats)
                 total_len = feats.shape[0] * effective_seg_len + args.overlap * gender_seg_len
                 pred_frame_level = np.zeros(int(100*total_len))
