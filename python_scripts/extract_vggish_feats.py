@@ -81,7 +81,7 @@ def main(_):
 
     for movie_file in movie_files:
         movie_id = movie_file[movie_file.rfind('/')+1:movie_file.rfind('.')]
-        if type(movie_id) != str:
+        if type(movie_id) == str:
             movie_id = movie_id.encode()
         write_file = os.path.join(args.write_dir, movie_id + '.tfrecord') 
         if os.path.exists(write_file):
